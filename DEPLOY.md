@@ -145,7 +145,7 @@ APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://club.backclub.it
 
-# IMPORTANTE: vuoto in produzione (evita /api/api/...)
+# Hostinger: vuoto — le route sono /entry/... (Apache passa il path senza prefisso /api)
 API_ROUTE_PREFIX=
 
 DB_CONNECTION=mysql
@@ -353,7 +353,7 @@ Senza secret: usa `./scripts/deploy.sh` + rsync manuale.
 | 404 su `/api/*` | Verifica `public_html/api/index.php` e `.htaccess` |
 | 404 su route SPA | Verifica `public_html/.htaccess` (fallback index.html) |
 | 500 API | `tail ~/domains/club.backclub.it/api/storage/logs/laravel.log` |
-| `/api/api/entry` | `.env` → `API_ROUTE_PREFIX=` **vuoto**, poi `config:cache` |
+| `/api/entry` 404 ma `/api/up` OK | `.env` → `API_ROUTE_PREFIX=` (vuoto), aggiorna `bootstrap/app.php` dal repo, `index.php` senza strip URI, poi `route:clear` + `config:clear` + `route:cache`. `route:list` deve mostrare `entry/{club_id}` non `api/entry` |
 | CORS error | `FRONTEND_URL` e `CORS_ALLOWED_ORIGINS` = `https://club.backclub.it` |
 | Permessi storage | `chmod -R 775 storage bootstrap/cache` |
 | Queue non parte | Verifica cron scheduler (sezione 3.6) |

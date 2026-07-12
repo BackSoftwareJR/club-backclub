@@ -7,7 +7,18 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-$apiRoutePrefix = env('API_ROUTE_PREFIX', 'api');
+/**
+ * Hostinger deploy: public_html/api/index.php receives paths like /entry/... (no /api prefix).
+ * Set API_ROUTE_PREFIX= (empty) in production .env.
+ * Local dev: omit API_ROUTE_PREFIX → defaults to "api".
+ */
+$apiRoutePrefix = (static function (): string {
+    if (env('API_ROUTE_PREFIX') === null && ! isset($_ENV['API_ROUTE_PREFIX']) && ! isset($_SERVER['API_ROUTE_PREFIX'])) {
+        return 'api';
+    }
+
+    return (string) env('API_ROUTE_PREFIX', '');
+})();
 
 $isApiRequest = static function (Request $request) use ($apiRoutePrefix): bool {
     if ($apiRoutePrefix !== '' && $apiRoutePrefix !== null) {

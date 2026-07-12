@@ -3,13 +3,18 @@
 return [
 
     'paths' => (static function (): array {
-        $prefix = env('API_ROUTE_PREFIX', 'api');
+        $prefix = env('API_ROUTE_PREFIX');
+        if ($prefix === null && ! isset($_ENV['API_ROUTE_PREFIX']) && ! isset($_SERVER['API_ROUTE_PREFIX'])) {
+            $prefix = 'api';
+        } else {
+            $prefix = (string) ($prefix ?? '');
+        }
 
-        if ($prefix === '' || $prefix === null) {
+        if ($prefix === '') {
             return ['entry/*', 'auth/*', 'clubs/*', 'up'];
         }
 
-        return [trim((string) $prefix, '/').'/*'];
+        return [trim($prefix, '/').'/*'];
     })(),
 
     'allowed_methods' => ['*'],

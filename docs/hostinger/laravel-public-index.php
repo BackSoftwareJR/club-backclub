@@ -6,9 +6,8 @@
  * Place as: domains/club.backclub.it/public_html/api/index.php
  * Laravel app root: domains/club.backclub.it/api/ (outside public_html)
  *
- * Strips the /api URL prefix so routes match with API_ROUTE_PREFIX= (empty).
  * External URL: https://club.backclub.it/api/entry/1/NFC-OWNER-001
- * Internal path: /entry/1/NFC-OWNER-001
+ * Internal path (Hostinger): /entry/1/NFC-OWNER-001 — set API_ROUTE_PREFIX= (empty) in .env
  */
 
 use Illuminate\Foundation\Application;
@@ -27,25 +26,4 @@ require $laravelRoot.'/vendor/autoload.php';
 /** @var Application $app */
 $app = require_once $laravelRoot.'/bootstrap/app.php';
 
-$request = Request::capture();
-$uri = $request->getRequestUri();
-$path = parse_url($uri, PHP_URL_PATH) ?? '/';
-
-if (str_starts_with($path, '/api')) {
-    $strippedPath = substr($path, 4) ?: '/';
-    $query = parse_url($uri, PHP_URL_QUERY);
-    $newUri = $strippedPath.($query ? '?'.$query : '');
-
-    $request = Request::create(
-        $newUri,
-        $request->getMethod(),
-        $request->request->all(),
-        $request->cookies->all(),
-        $request->files->all(),
-        $request->server->all(),
-        $request->getContent()
-    );
-    $request->headers->replace($request->headers->all());
-}
-
-$app->handleRequest($request);
+$app->handleRequest(Request::capture());
