@@ -142,11 +142,13 @@ block "LARAVEL APP UPDATE (rsync backend → api/ fuori public_html)" \
   --exclude 'storage/framework/cache/data/' \
   --exclude 'storage/framework/sessions/' \
   --exclude 'storage/framework/views/' \
+  --exclude 'bootstrap/cache/*.php' \
+  --exclude 'vendor/' \
   --exclude 'public/' \
   ${ROOT}/backend/ ${SSH_TARGET}:${LARAVEL_PATH}/"
 
 block "LARAVEL POST-DEPLOY (composer + migrate + cache)" \
-"ssh ${SSH_TARGET} \"cd ${LARAVEL_PATH} && composer install --no-dev --optimize-autoloader && php artisan migrate --force && php artisan config:cache && php artisan route:cache\""
+"ssh ${SSH_TARGET} \"cd ${LARAVEL_PATH} && rm -f bootstrap/cache/*.php && composer install --no-dev --optimize-autoloader && php artisan migrate --force && php artisan config:cache && php artisan route:cache\""
 
 block "API PUBLIC ENTRY (solo index.php + .htaccess in public_html/api/)" \
 "ssh ${SSH_TARGET} \"mkdir -p ${API_PUBLIC_PATH}\"
