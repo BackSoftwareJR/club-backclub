@@ -42,6 +42,7 @@ $isApiRequest = static function (Request $request) use ($apiRoutePrefix): bool {
         || $request->is('auth/*')
         || $request->is('clubs/*')
         || $request->is('legal/*')
+        || $request->is('media/*')
         || $request->is('security/*')
         || $request->is('up');
 };

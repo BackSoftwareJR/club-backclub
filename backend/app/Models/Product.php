@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Storage;
+use App\Support\MediaUrl;
 
 class Product extends Model
 {
@@ -55,6 +55,6 @@ class Product extends Model
             return null;
         }
 
-        return Storage::disk('public')->url($this->cover_image_path);
+        return MediaUrl::fromPath($this->cover_image_path);
     }
 }

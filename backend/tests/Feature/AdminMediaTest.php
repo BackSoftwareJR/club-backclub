@@ -31,7 +31,7 @@ class AdminMediaTest extends TestCase
         $coverResponse->assertOk()
             ->assertJsonPath('id', $product->id)
             ->assertJsonPath('gallery', [])
-            ->assertJsonPath('cover_image_url', fn ($url) => is_string($url) && str_contains($url, '/storage/'));
+            ->assertJsonPath('cover_image_url', fn ($url) => is_string($url) && str_contains($url, 'clubs/'));
 
         $galleryA = $this->withBearer($token)->postJson(
             "/api/clubs/{$clubId}/admin/products/{$product->id}/gallery",
@@ -136,9 +136,9 @@ class AdminMediaTest extends TestCase
         );
 
         $logoResponse->assertOk()
-            ->assertJsonPath('data.logo_image_url', fn ($url) => is_string($url) && str_contains($url, '/storage/'));
+            ->assertJsonPath('data.logo_image_url', fn ($url) => is_string($url) && str_contains($url, 'clubs/'));
         $heroResponse->assertOk()
-            ->assertJsonPath('data.hero_image_url', fn ($url) => is_string($url) && str_contains($url, '/storage/'))
+            ->assertJsonPath('data.hero_image_url', fn ($url) => is_string($url) && str_contains($url, 'clubs/'))
             ->assertJsonPath('data.theme_config.assets.logo_url', fn ($url) => is_string($url));
 
         $identity = $this->withBearer($token)->getJson("/api/clubs/{$clubId}/admin/identity");
@@ -237,7 +237,7 @@ class AdminMediaTest extends TestCase
         ]);
 
         $login->assertOk()
-            ->assertJsonPath('club.theme_config.assets.logo_url', fn ($url) => is_string($url) && str_contains($url, '/storage/'))
-            ->assertJsonPath('club.theme_config.assets.cover_url', fn ($url) => is_string($url) && str_contains($url, '/storage/'));
+            ->assertJsonPath('club.theme_config.assets.logo_url', fn ($url) => is_string($url) && str_contains($url, 'clubs/'))
+            ->assertJsonPath('club.theme_config.assets.cover_url', fn ($url) => is_string($url) && str_contains($url, 'clubs/'));
     }
 }

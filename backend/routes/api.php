@@ -5,7 +5,7 @@ use App\Http\Controllers\Api\Admin\AdminMediaController;
 use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Compliance\LegalController;
-use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\Security\SecurityController;
 use App\Http\Controllers\Api\User\UserClubController;
@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/legal/terms', [LegalController::class, 'show']);
+Route::get('/media/{path}', [MediaController::class, 'show'])->where('path', '.*');
 Route::post('/security/direct-access', [SecurityController::class, 'reportDirectAccess'])
     ->middleware('throttle:6,1');
 

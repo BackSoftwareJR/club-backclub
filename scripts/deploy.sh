@@ -142,6 +142,7 @@ block "LARAVEL APP UPDATE (rsync backend → api/ fuori public_html)" \
   --exclude 'storage/framework/cache/data/' \
   --exclude 'storage/framework/sessions/' \
   --exclude 'storage/framework/views/' \
+  --exclude 'storage/app/public/' \
   --exclude 'bootstrap/cache/*.php' \
   --exclude 'vendor/' \
   --exclude 'public/' \
@@ -158,8 +159,12 @@ scp ${ROOT}/docs/hostinger/laravel-public.htaccess ${SSH_TARGET}:${API_PUBLIC_PA
 block "SPA ROOT .htaccess (SPA fallback + pass-through /api)" \
 "scp ${ROOT}/docs/hostinger/public_html.htaccess ${SSH_TARGET}:${PUBLIC_HTML}/.htaccess"
 
-block "STORAGE SYMLINK (immagini prodotto / logo club)" \
-"ssh ${SSH_TARGET} \"ln -sfn ${LARAVEL_PATH}/storage/app/public ${PUBLIC_HTML}/storage && chmod -R 775 ${LARAVEL_PATH}/storage\""
+block "MEDIA PERSISTENTE (cartella fuori deploy + .env)" \
+"ssh ${SSH_TARGET} 'bash -s' < ${ROOT}/scripts/hostinger-media-setup.sh
+ssh ${SSH_TARGET} \"cd ${LARAVEL_PATH} && /opt/alt/php84/usr/bin/php artisan config:cache\""
+
+block "STORAGE SYMLINK (legacy /storage — opzionale)" \
+"ssh ${SSH_TARGET} \"ln -sfn ${LARAVEL_PATH}/storage/app/public ${PUBLIC_HTML}/storage 2>/dev/null || ln -sfn ${DOMAIN_PATH}/media ${PUBLIC_HTML}/storage || true\""
 
 block "FRONTEND UPDATE (rsync da questa macchina — NON cancellare api/ né storage/ né .htaccess)" \
 "rsync -avz --delete --filter 'protect api/' --filter 'protect storage/' --exclude '.htaccess' ${ROOT}/frontend/dist/ ${SSH_TARGET}:${PUBLIC_HTML}/

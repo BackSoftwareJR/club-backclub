@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Storage;
+use App\Support\MediaUrl;
 
 class Club extends Model
 {
@@ -61,7 +61,7 @@ class Club extends Model
     public function logoImageUrl(): ?string
     {
         if ($this->logo_image_path) {
-            return Storage::disk('public')->url($this->logo_image_path);
+            return MediaUrl::fromPath($this->logo_image_path);
         }
 
         $logoFromTheme = data_get($this->theme_config, 'assets.logo_url');
@@ -72,7 +72,7 @@ class Club extends Model
     public function heroImageUrl(): ?string
     {
         if ($this->hero_image_path) {
-            return Storage::disk('public')->url($this->hero_image_path);
+            return MediaUrl::fromPath($this->hero_image_path);
         }
 
         $coverFromTheme = data_get($this->theme_config, 'assets.cover_url');

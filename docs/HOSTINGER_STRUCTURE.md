@@ -75,17 +75,33 @@ In produzione Hostinger, la cartella fisica **è già** `/api/`. Se Laravel aggi
 
 ### Immagini upload (cover prodotti, logo club)
 
-Laravel salva in `api/storage/app/public/`. L'URL generato è `https://club.backclub.it/storage/...`.
+Le immagini sono servite via **`https://club.backclub.it/api/media/clubs/...`** (route Laravel pubblica).
 
-Su Hostinger crea **una tantum** il symlink web:
+I file vivono **fuori** dalla cartella deploy, in `domains/club.backclub.it/media/`:
 
 ```bash
-ln -sfn ~/domains/club.backclub.it/api/storage/app/public \
-  ~/domains/club.backclub.it/public_html/storage
-chmod -R 775 ~/domains/club.backclub.it/api/storage
+bash scripts/hostinger-media-setup.sh   # oppure via SSH (vedi sotto)
 ```
 
-Nei deploy frontend con `rsync --delete` proteggi `storage/` (`--filter 'protect storage/'`) altrimenti il symlink viene rimosso.
+`.env` produzione:
+
+```dotenv
+MEDIA_ROOT_PATH=/home/u589701076/domains/club.backclub.it/media
+MEDIA_PUBLIC_URL=https://club.backclub.it/api/media
+```
+
+Setup SSH:
+
+```bash
+mkdir -p ~/domains/club.backclub.it/media/clubs
+# migra upload esistenti (se presenti)
+mv ~/domains/club.backclub.it/api/storage/app/public/clubs/* \
+   ~/domains/club.backclub.it/media/clubs/ 2>/dev/null || true
+```
+
+Aggiungi le due righe `MEDIA_*` al `.env`, poi `php artisan config:cache`.
+
+Nei deploy: **non** rsyncare `media/` né `storage/app/public/`. Il frontend rsync deve proteggere `storage/` se usi ancora il symlink legacy.
 
 ---
 
