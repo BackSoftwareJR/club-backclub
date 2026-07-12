@@ -35,11 +35,11 @@ export function resolveApiErrorMessage(
   }
 
   if (code === 'pin_locked') {
-    return 'Too many failed PIN attempts. Try again in 15 minutes.'
+    return 'Access blocked for 24 hours.'
   }
 
   if (code === 'ip_blocked') {
-    return 'Too many failed attempts from this device. Try again in 5 minutes.'
+    return 'Access blocked for 24 hours.'
   }
 
   if (status === 402) {

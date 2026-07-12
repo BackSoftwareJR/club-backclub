@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\ClubMember;
 use App\Models\IpAuthBlock;
+use App\Models\SecurityLog;
+use App\Services\Auth\IpAuthBlockService;
 use Database\Seeders\ClubSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -37,14 +39,21 @@ class AuthLoginTest extends TestCase
             ->assertJsonStructure(['club_name', 'theme_config']);
     }
 
-    public function test_entry_rejects_unknown_card(): void
+    public function test_entry_ghost_redirects_and_logs_unknown_card(): void
     {
         $this->seedClub();
 
         $response = $this->getJson('/api/entry/'.$this->clubId().'/NFC-UNKNOWN');
 
-        $response->assertUnauthorized()
-            ->assertJsonPath('error', 'unauthorized');
+        $response->assertNotFound()
+            ->assertJsonPath('error', 'ghost_redirect')
+            ->assertJsonPath('redirect_url', 'https://www.google.com');
+
+        $this->assertDatabaseHas('security_logs', [
+            'club_id' => $this->clubId(),
+            'violation_type' => SecurityLog::INVALID_NFC,
+            'nfc_uid' => 'NFC-UNKNOWN',
+        ]);
     }
 
     public function test_entry_rejects_suspended_member(): void
@@ -96,11 +105,11 @@ class AuthLoginTest extends TestCase
             ->assertJsonPath('error', 'unauthorized');
     }
 
-    public function test_login_locks_pin_after_five_failed_attempts(): void
+    public function test_login_ghost_redirects_and_blocks_ip_after_three_failed_attempts(): void
     {
         $this->seedClub();
 
-        for ($i = 0; $i < 4; $i++) {
+        for ($i = 0; $i < 2; $i++) {
             $this->postJson('/api/auth/login', [
                 'club_id' => $this->clubId(),
                 'nfc_uid' => 'NFC-OWNER-001',
@@ -115,7 +124,17 @@ class AuthLoginTest extends TestCase
         ]);
 
         $response->assertStatus(429)
-            ->assertJsonPath('error', 'pin_locked');
+            ->assertJsonPath('error', 'ghost_redirect')
+            ->assertJsonPath('redirect_url', 'https://www.google.com');
+
+        $this->assertTrue(
+            IpAuthBlock::query()->where('ip_address', '127.0.0.1')->first()?->isBlocked() ?? false
+        );
+        $this->assertDatabaseHas('security_logs', [
+            'club_id' => $this->clubId(),
+            'violation_type' => SecurityLog::WRONG_PIN,
+            'nfc_uid' => 'NFC-OWNER-001',
+        ]);
     }
 
     public function test_login_rejects_suspended_member(): void
@@ -136,17 +155,10 @@ class AuthLoginTest extends TestCase
             ->assertJsonPath('error', 'forbidden');
     }
 
-    public function test_ip_block_after_ten_failed_attempts(): void
+    public function test_blocked_ip_receives_ghost_redirect(): void
     {
         $this->seedClub();
-
-        for ($i = 0; $i < 9; $i++) {
-            $this->postJson('/api/auth/login', [
-                'club_id' => $this->clubId(),
-                'nfc_uid' => 'NFC-UNKNOWN',
-                'pin' => '000000',
-            ])->assertUnauthorized();
-        }
+        app(IpAuthBlockService::class)->blockForDay('127.0.0.1');
 
         $response = $this->postJson('/api/auth/login', [
             'club_id' => $this->clubId(),
@@ -155,7 +167,7 @@ class AuthLoginTest extends TestCase
         ]);
 
         $response->assertStatus(429)
-            ->assertJsonPath('error', 'ip_blocked');
+            ->assertJsonPath('error', 'ghost_redirect');
 
         $this->assertTrue(
             IpAuthBlock::query()->where('ip_address', '127.0.0.1')->first()?->isBlocked() ?? false

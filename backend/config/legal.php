@@ -2,18 +2,22 @@
 
 return [
 
-    'version' => '2026-07-12.1',
+    'version' => '2026-07-12.2',
 
     'effective_date' => '2026-07-12',
 
-    'title' => 'Termini di utilizzo — Simulazione personale (non commerciale)',
+    'title' => 'Termini di utilizzo — Salvadanaio personale privato di Julian Rovera',
 
-    'summary' => 'Piattaforma privata di simulazione per cassa risparmi personale. Nessuna vendita, nessuna iscrizione pubblica, accesso solo tramite carta NFC autorizzata.',
+    'owner_email_key' => env('GHOST_OWNER_EMAIL_KEY', 'owner@velvet.club'),
+
+    'disclaimer' => 'Questa piattaforma è un database chiuso ad uso esclusivo di Julian Rovera come salvadanaio personale. Non è un sistema di vendita, non gestisce denaro di terzi e le email/dati presenti sono fittizi o a solo scopo di test. Ogni accesso non autorizzato è vietato e tracciato.',
+
+    'summary' => 'Database chiuso sviluppato e utilizzato esclusivamente da Julian Rovera come salvadanaio personale gamificato. Nessuna vendita, nessun denaro di terzi, nessuna iscrizione pubblica.',
 
     'sections' => [
         [
             'heading' => '1. Natura del servizio (simulazione / gioco privato)',
-            'body' => 'Club CRM è uno strumento software privato, sviluppato e gestito esclusivamente dal titolare per uso personale di simulazione contabile ("cassa risparmi" virtuale). Non costituisce servizio commerciale, marketplace, e-commerce, vendita al dettaglio, distribuzione di prodotti reali, né organizzazione di vendita di alcun tipo.',
+            'body' => 'Club CRM è un database chiuso sviluppato e utilizzato unicamente da Julian Rovera come salvadanaio personale gamificato per tracciare i propri risparmi. Non costituisce servizio commerciale, club pubblico, marketplace, e-commerce, vendita al dettaglio, distribuzione di prodotti reali, gestione di denaro di terzi, né organizzazione di vendita di alcun tipo.',
         ],
         [
             'heading' => '2. Divieto di accesso non autorizzato',

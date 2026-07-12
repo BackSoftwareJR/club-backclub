@@ -25,6 +25,7 @@ class LegalTermsService
             'effective_date' => config('legal.effective_date'),
             'title' => config('legal.title'),
             'summary' => config('legal.summary'),
+            'disclaimer' => config('legal.disclaimer'),
             'sections' => config('legal.sections', []),
         ];
     }

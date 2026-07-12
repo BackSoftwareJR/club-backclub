@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Api\Compliance;
 
 use App\Exceptions\ForbiddenApiException;
+use App\Exceptions\GhostRedirectException;
 use App\Http\Controllers\Controller;
 use App\Http\Concerns\ResolvesJwtContext;
 use App\Http\Requests\Compliance\AcceptLegalTermsRequest;
 use App\Models\ClubMember;
+use App\Models\SecurityLog;
 use App\Services\Compliance\ActivityLogService;
 use App\Services\Compliance\LegalTermsService;
+use App\Services\Security\SecurityLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,6 +22,7 @@ class LegalController extends Controller
     public function __construct(
         private readonly LegalTermsService $legalTermsService,
         private readonly ActivityLogService $activityLogService,
+        private readonly SecurityLogService $securityLogService,
     ) {}
 
     public function show(): JsonResponse
@@ -38,7 +42,18 @@ class LegalController extends Controller
             ->first();
 
         if ($member === null) {
-            throw new ForbiddenApiException('Card not recognized for this club.');
+            $this->securityLogService->record(
+                request: $request,
+                violationType: SecurityLog::INVALID_NFC,
+                clubId: (int) $validated['club_id'],
+                nfcUid: $validated['nfc_uid'],
+                metadata: ['reason' => 'terms_accept_unknown_card'],
+            );
+            throw new GhostRedirectException(
+                violationType: SecurityLog::INVALID_NFC,
+                clubId: (int) $validated['club_id'],
+                nfcUid: $validated['nfc_uid'],
+            );
         }
 
         $version = $validated['terms_version'] ?? $this->legalTermsService->currentVersion();

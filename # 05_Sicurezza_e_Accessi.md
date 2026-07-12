@@ -2,6 +2,14 @@
 **Target Audience:** Autonomous AI Developer Agent (Paul) / Cursor Execution Environment.
 **Document Purpose:** Define the zero-trust access perimeter, the strict NFC-to-PIN validation flow, session isolation parameters, and remote administration controls. 
 
+## 0. Protocollo Ghost
+- The application has no public landing page. A request without an authenticated session or valid NFC entry context renders no application content and immediately uses `window.location.replace('https://www.google.com')`.
+- Invalid, expired, or manipulated NFC values return the machine-readable API code `ghost_redirect`; the frontend clears local state and redirects with no delay.
+- On the third incorrect PIN, Laravel persists a 24-hour IP block, records a `Wrong PIN` security event, and returns `ghost_redirect`.
+- Every Ghost redirect is recorded in `security_logs` with IP, user agent, exact timestamp, violation type, attempted route, and available NFC/club context.
+- Security Radar is owner-only and displays a pulsing red alert when any event occurred within the previous 24 hours.
+- Redirecting to an unrelated site is camouflage only. JWT scope, PIN hashing, throttling, server-side authorization, and NFC validation remain the actual security controls.
+
 ## 1. The "Zero-Trust" Entry Perimeter
 The system completely abandons traditional email/password authentication for User access. The physical NFC card is the hardware key. 
 *   **The Entry URL:** The NFC card stores a static URL (e.g., `https://app.domain.com/entry/{club_id}/{nfc_uid}`).
@@ -34,7 +42,7 @@ Because physical cards can be lost or stolen, the Admin must have absolute autho
     *   *Result:* The next time the user scans that specific card, they will be forced through the "First-Time Onboarding" flow to choose a new PIN.
 *   **Action: Suspend Access**
     *   *Implementation:* Admin toggles user state. API sets `club_members.status` to `suspended`.
-    *   *Result:* The API's authentication middleware must intercept this state. Even if the user has the card and the correct PIN, the login endpoint must return an HTTP 403 with a "Contact Administrator" message.
+    *   *Result:* The API authentication middleware intercepts the state without exposing application details to unauthorized clients.
 *   **Action: Revoke/Reassign Card**
     *   *Implementation:* Admin unlinks the card. API nullifies the `nfc_uid` in `club_members` for that user. The physical card is now effectively dead or ready to be wiped/reassigned to someone else.
 

@@ -2,6 +2,17 @@
 **Target Audience:** Autonomous AI Developer Agent (Paul) / Cursor Execution Environment.
 **Document Purpose:** Define the relational database schema, the JSON data structures for dynamic entities, and the strict API contract for the Laravel backend.
 
+## 0. Protocollo Ghost — architectural override
+This is a single-owner personal savings simulator for Julian Rovera. It is not multi-tenant software offered to external users, does not process third-party money, and must not expose registration or public application pages. Existing club-scoped tables are internal isolation modules, not public organizations.
+
+The security boundary consists of:
+- validated NFC context and six-digit PIN before JWT issuance;
+- `legal_acceptances` for versioned, timestamped disclaimer acceptance;
+- `activity_logs` for authorized operational auditing;
+- `security_logs` for rejected direct routes, invalid NFC identifiers, wrong-PIN lockouts, IP, user agent, attempted route, and exact timestamp;
+- `ip_auth_blocks` with a 24-hour block after three failed PIN attempts;
+- owner-only Security Radar API and UI.
+
 ## 1. System Architecture Pattern
 *   **Backend:** Headless API utilizing a modular Laravel framework. Must expose strict REST/GraphQL endpoints.
 *   **Frontend:** Next.js (React 19) initialized via Vite for local HMR. Operates as a completely decoupled SPA consuming the Laravel APIs.
@@ -11,8 +22,8 @@
 The database must enforce strict foreign key constraints. Use the following structural guidelines for migrations. Do NOT hallucinate standard e-commerce tables (like `carts` or `orders`).
 
 ### A. Identity & Access Control
-*   `users`: Global identity registry (`id`, `email`, `password_hash`).
-*   `clubs`: The core multi-tenant entity (`id`, `owner_id` -> references users, `name`, `theme_config` (JSON)).
+*   `users`: Internal fictional identity-key registry. It must not contain real external email accounts.
+*   `clubs`: Internal personal savings modules owned by Julian Rovera (`id`, `owner_id`, `name`, `theme_config`).
 *   `club_members` (Pivot): The gatekeeper table.
     *   Fields: `club_id`, `user_id`, `nfc_uid` (Unique string, strictly tied to the physical card), `pin_hash` (6-digit hardware lock), `status` (active, paused).
     *   **Crucial Logic:** Session JWT generation relies exclusively on resolving `nfc_uid` + `pin_hash` against this specific table.
@@ -20,10 +31,10 @@ The database must enforce strict foreign key constraints. Use the following stru
 ### B. Financial Engine (The Decoupled Treasury)
 Separate the Club's real-world cash flow from the User's virtual credit. This is non-negotiable.
 
-*   `club_ledger`: The master cash flow registry for the Administration.
+*   `club_ledger`: Julian Rovera's private personal-savings movement registry.
     *   Fields: `id`, `club_id`, `transaction_type` (ENUM: 'user_topup', 'admin_expense', 'admin_injection'), `amount` (Decimal, 10,2), `description`, `created_at`.
-    *   *Rule:* ONLY real-world money movements (cash collected, bills paid) touch this table.
-*   `user_wallets`: The virtual credit balance.
+    *   *Rule:* entries are private personal accounting notes, never third-party payments, invoices, or sales.
+*   `user_wallets`: Simulated personal savings allocation.
     *   Fields: `id`, `club_id`, `user_id`, `current_balance` (Decimal, 10,2).
 *   `wallet_transactions`: The log of consumed credits (internal purchases).
     *   Fields: `id`, `wallet_id`, `product_id`, `amount_deducted` (Decimal, 10,2), `metadata` (JSON for arbitrary quantities/notes), `created_at`.

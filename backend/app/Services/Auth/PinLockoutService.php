@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\DB;
 
 class PinLockoutService
 {
-    private const MAX_ATTEMPTS = 5;
+    private const MAX_ATTEMPTS = 3;
 
-    private const LOCKOUT_MINUTES = 15;
+    private const LOCKOUT_MINUTES = 1440;
 
     public function assertNotLocked(ClubMember $member): void
     {
@@ -20,17 +20,25 @@ class PinLockoutService
         if ($member->isPinLocked()) {
             throw new PinLockedException;
         }
+
+        if ($member->pin_locked_until?->isPast()) {
+            $this->resetAttempts($member);
+        }
     }
 
     public function recordFailedAttempt(ClubMember $member): void
     {
-        DB::transaction(function () use ($member) {
+        $lockedOut = DB::transaction(function () use ($member): bool {
             $locked = ClubMember::query()
                 ->whereKey($member->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
             $attempts = $locked->failed_pin_attempts + 1;
+
+            if ($locked->pin_locked_until?->isPast()) {
+                $attempts = 1;
+            }
 
             $attributes = ['failed_pin_attempts' => $attempts];
 
@@ -40,10 +48,12 @@ class PinLockoutService
 
             $locked->update($attributes);
 
-            if ($attempts >= self::MAX_ATTEMPTS) {
-                throw new PinLockedException;
-            }
+            return $attempts >= self::MAX_ATTEMPTS;
         });
+
+        if ($lockedOut) {
+            throw new PinLockedException;
+        }
     }
 
     public function resetAttempts(ClubMember $member): void

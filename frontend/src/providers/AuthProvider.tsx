@@ -18,6 +18,7 @@ import {
   type EntryContext,
 } from '@/lib/storage'
 import { applyThemeToDocument } from '@/providers/ThemeProvider'
+import { ghostRedirect } from '@/lib/ghost'
 import type { AuthResponse, AuthSession, ThemeConfig } from '@/types'
 import { useIdleTimeout } from '@/hooks/useIdleTimeout'
 
@@ -54,8 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSession()
     setSessionState(null)
     setIsLocked(false)
-    void navigate({ to: '/' })
-  }, [navigate])
+    ghostRedirect()
+  }, [])
 
   const handleIdle = useCallback(() => {
     if (session) {

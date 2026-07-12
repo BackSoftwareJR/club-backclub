@@ -254,6 +254,7 @@ export interface LegalTermsDocument {
   effective_date: string
   title: string
   summary: string
+  disclaimer: string
   sections: LegalTermsSection[]
 }
 
@@ -267,4 +268,20 @@ export interface ActivityLogEntry {
   ip_address: string | null
   metadata: Record<string, unknown> | null
   occurred_at: string | null
+}
+
+export interface SecurityLogEntry {
+  id: number
+  violation_type: string
+  attempted_route: string
+  ip_address: string | null
+  user_agent: string | null
+  nfc_uid: string | null
+  metadata: Record<string, unknown> | null
+  occurred_at: string | null
+}
+
+export interface SecurityRadarResponse {
+  data: SecurityLogEntry[]
+  has_recent_intrusions: boolean
 }

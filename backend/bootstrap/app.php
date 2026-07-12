@@ -41,6 +41,8 @@ $isApiRequest = static function (Request $request) use ($apiRoutePrefix): bool {
     return $request->is('entry/*')
         || $request->is('auth/*')
         || $request->is('clubs/*')
+        || $request->is('legal/*')
+        || $request->is('security/*')
         || $request->is('up');
 };
 
@@ -55,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'jwt.auth' => \App\Http\Middleware\JwtAuthMiddleware::class,
+            'ghost.security' => \App\Http\Middleware\GhostSecurityMiddleware::class,
             'ip.auth.block' => \App\Http\Middleware\IpAuthBlockMiddleware::class,
             'club.scope' => \App\Http\Middleware\ClubScopeMiddleware::class,
             'club.admin' => \App\Http\Middleware\ClubAdminMiddleware::class,

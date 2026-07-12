@@ -27,7 +27,7 @@ class ActivityLogService
             'club_id' => $member?->club_id ?? $clubId,
             'user_id' => $member?->user_id,
             'club_member_id' => $member?->id,
-            'nfc_uid' => $nfcUid ?? $member?->nfc_uid,
+            'nfc_uid' => mb_substr($nfcUid ?? $member?->nfc_uid ?? '', 0, 64) ?: null,
             'event_type' => $eventType,
             'status' => $status,
             'ip_address' => $request?->ip(),

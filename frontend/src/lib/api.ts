@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from 'axios'
 import type {
+  ActivityLogEntry,
   AdminAnalyticsResponse,
   AdminInjectionResponse,
   AiChatResponse,
@@ -17,12 +18,14 @@ import type {
   Product,
   ProductPayload,
   PurchaseResponse,
+  SecurityRadarResponse,
   TopupRequest,
   TreasuryResponse,
   WalletResponse,
 } from '@/types'
 import { ApiRequestError, resolveApiErrorMessage } from '@/lib/apiErrors'
-import { clearSession, getToken } from '@/lib/storage'
+import { ghostRedirect } from '@/lib/ghost'
+import { getToken } from '@/lib/storage'
 
 interface ApiErrorBody {
   message?: string
@@ -57,9 +60,14 @@ apiClient.interceptors.response.use(
   (error: AxiosError<ApiErrorBody>) => {
     const status = error.response?.status
     const requestUrl = error.config?.url
+    const errorCode = error.response?.data?.error
+
+    if (errorCode === 'ghost_redirect') {
+      ghostRedirect()
+    }
 
     if (status === 401 && !isPublicAuthRequest(requestUrl) && getToken()) {
-      clearSession()
+      ghostRedirect()
     }
 
     const message = resolveApiErrorMessage(status, error.response?.data)
@@ -327,8 +335,14 @@ export const api = {
     }),
 
   listActivityLogs: (clubId: number) =>
-    request<{ data: import('@/types').ActivityLogEntry[] }>({
+    request<{ data: ActivityLogEntry[] }>({
       method: 'GET',
       url: `/clubs/${clubId}/admin/activity-logs`,
+    }),
+
+  getSecurityRadar: (clubId: number) =>
+    request<SecurityRadarResponse>({
+      method: 'GET',
+      url: `/clubs/${clubId}/admin/security-radar`,
     }),
 }

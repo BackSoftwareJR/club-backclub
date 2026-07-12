@@ -5,13 +5,14 @@ export interface NavLinkItem {
     | '/club/$clubId/settings'
     | '/club/$clubId/admin'
     | '/club/$clubId/admin/analytics'
+    | '/club/$clubId/admin/security'
     | '/club/$clubId/admin/topups'
     | '/club/$clubId/admin/members'
     | '/club/$clubId/admin/products'
     | '/club/$clubId/admin/appearance'
   label: string
   shortLabel?: string
-  icon: 'catalog' | 'wallet' | 'settings' | 'treasury' | 'analytics' | 'topups' | 'members' | 'products' | 'appearance'
+  icon: 'catalog' | 'wallet' | 'settings' | 'treasury' | 'analytics' | 'security' | 'topups' | 'members' | 'products' | 'appearance'
 }
 
 export const memberLinks: NavLinkItem[] = [
@@ -27,6 +28,7 @@ export const adminPrimaryLinks: NavLinkItem[] = [
 ]
 
 export const adminOverflowLinks: NavLinkItem[] = [
+  { to: '/club/$clubId/admin/security', label: 'Security Radar', icon: 'security' },
   { to: '/club/$clubId/admin/analytics', label: 'Analytics', icon: 'analytics' },
   { to: '/club/$clubId/admin/products', label: 'Products', icon: 'products' },
   { to: '/club/$clubId/admin/appearance', label: 'Aspetto', icon: 'appearance' },

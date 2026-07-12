@@ -7,13 +7,16 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Compliance\LegalController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\PurchaseController;
+use App\Http\Controllers\Api\Security\SecurityController;
 use App\Http\Controllers\Api\User\UserClubController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/legal/terms', [LegalController::class, 'show']);
+Route::post('/security/direct-access', [SecurityController::class, 'reportDirectAccess'])
+    ->middleware('throttle:6,1');
 
-Route::middleware(['throttle:entry', 'ip.auth.block'])->group(function () {
+Route::middleware(['ghost.security', 'throttle:entry'])->group(function () {
     Route::get('/entry/{club_id}/{nfc_uid}', [AuthController::class, 'entry']);
     Route::post('/legal/accept', [LegalController::class, 'accept']);
     Route::post('/auth/pin-setup', [AuthController::class, 'pinSetup']);
@@ -73,5 +76,6 @@ Route::middleware(['jwt.auth', 'club.member.active', 'club.admin'])->group(funct
         Route::delete('/identity/hero', [AdminMediaController::class, 'deleteClubHero']);
 
         Route::get('/activity-logs', [LegalController::class, 'activityLogs']);
+        Route::get('/security-radar', [SecurityController::class, 'radar']);
     });
 });
