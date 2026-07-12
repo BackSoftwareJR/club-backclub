@@ -9,8 +9,10 @@ function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl">Settings</h2>
-        <p className="text-sm text-white/50">Manage your clubs and account.</p>
+        <h2 className="text-2xl">Impostazioni</h2>
+        <p className="text-sm text-white/50">
+          Cambia club, passa ad Admin e gestisci prodotti e membri da telefono.
+        </p>
       </div>
       <SettingsClubsPanel />
     </div>

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { ChevronRight, Copy, ExternalLink, Shield } from 'lucide-react'
+import { AdminToggle } from '@/components/layout/AdminToggle'
+import { ClubManageLinks } from '@/components/layout/ClubManageLinks'
+import { adminManageLinks } from '@/components/layout/navLinks'
 import { Button } from '@/components/ui/Button'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { LuxurySpinner } from '@/components/ui/LuxurySpinner'
@@ -223,6 +226,23 @@ export function SettingsClubsPanel() {
               <p className="text-xs uppercase tracking-[0.2em] text-primary/80">Club selezionato</p>
               <p className="mt-1 text-lg font-medium">{selectedClub.name}</p>
             </div>
+
+            {selectedClub.is_current && selectedClub.is_owner ? (
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/40">Modalità Admin</p>
+                <AdminToggle compact />
+                <p className="text-xs text-white/45">
+                  Oppure usa il toggle in alto a destra su ogni schermata mobile.
+                </p>
+              </div>
+            ) : null}
+
+            {selectedClub.is_current && selectedClub.is_owner ? (
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/40">Gestione rapida</p>
+                <ClubManageLinks clubId={selectedClub.id} compact links={adminManageLinks} />
+              </div>
+            ) : null}
 
             <div className="grid gap-2 sm:grid-cols-2">
               <Button

@@ -28,11 +28,21 @@ export const adminPrimaryLinks: NavLinkItem[] = [
 ]
 
 export const adminOverflowLinks: NavLinkItem[] = [
-  { to: '/club/$clubId/admin/security', label: 'Security Radar', icon: 'security' },
-  { to: '/club/$clubId/admin/analytics', label: 'Analytics', icon: 'analytics' },
-  { to: '/club/$clubId/admin/products', label: 'Products', icon: 'products' },
-  { to: '/club/$clubId/admin/appearance', label: 'Aspetto', icon: 'appearance' },
-  { to: '/club/$clubId/settings', label: 'Settings', icon: 'settings' },
+  { to: '/club/$clubId/admin/security', label: 'Security Radar', shortLabel: 'Security', icon: 'security' },
+  { to: '/club/$clubId/admin/analytics', label: 'Analytics', shortLabel: 'Stats', icon: 'analytics' },
+  { to: '/club/$clubId/admin/products', label: 'Products', shortLabel: 'Products', icon: 'products' },
+  { to: '/club/$clubId/admin/appearance', label: 'Aspetto', shortLabel: 'Look', icon: 'appearance' },
+  { to: '/club/$clubId/settings', label: 'Settings', shortLabel: 'Settings', icon: 'settings' },
+]
+
+/** Shortcuts shown to owners on mobile (member mode) and in Settings. */
+export const adminManageLinks: NavLinkItem[] = [
+  { to: '/club/$clubId/admin', label: 'Treasury', shortLabel: 'Treasury', icon: 'treasury' },
+  { to: '/club/$clubId/admin/members', label: 'Membri', shortLabel: 'Membri', icon: 'members' },
+  { to: '/club/$clubId/admin/topups', label: 'Ricariche', shortLabel: 'Top-up', icon: 'topups' },
+  { to: '/club/$clubId/admin/products', label: 'Prodotti', shortLabel: 'Prodotti', icon: 'products' },
+  { to: '/club/$clubId/admin/appearance', label: 'Aspetto', shortLabel: 'Look', icon: 'appearance' },
+  { to: '/club/$clubId/admin/analytics', label: 'Analytics', shortLabel: 'Stats', icon: 'analytics' },
 ]
 
 export const adminLinks: NavLinkItem[] = [...adminPrimaryLinks, ...adminOverflowLinks]

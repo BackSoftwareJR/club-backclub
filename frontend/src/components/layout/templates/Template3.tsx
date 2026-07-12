@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { TopNav } from '@/components/layout/AdminToggle'
+import { TopNav, AdminToggle } from '@/components/layout/AdminToggle'
 import { useCompactClubLayout } from '@/hooks/useCompactClubLayout'
 import { animatePageEnter } from '@/lib/gsap'
 import { useTheme } from '@/hooks/useAuth'
@@ -52,8 +52,13 @@ export function Template3({ clubId, clubName, children }: TemplateProps) {
                   <p className="truncate text-xs uppercase tracking-[0.25em] text-primary">{clubName}</p>
                 </div>
               </div>
-              <div className="hidden md:block">
-                <TopNav clubId={clubId} />
+              <div className="flex shrink-0 items-center gap-2">
+                <div className="md:hidden">
+                  <AdminToggle compact />
+                </div>
+                <div className="hidden md:block">
+                  <TopNav clubId={clubId} />
+                </div>
               </div>
             </div>
           </section>
