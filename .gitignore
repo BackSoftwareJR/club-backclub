@@ -18,6 +18,14 @@ frontend/dist/
 # Deploy config locale (contiene path SSH personali)
 scripts/deploy.config
 
+# Credentials / keys (never commit)
+*.pem
+*.key
+id_rsa
+id_ed25519
+credentials.json
+service-account*.json
+
 # Laravel
 backend/storage/*.key
 backend/.phpunit.result.cache

@@ -1,55 +1,76 @@
-# Struttura Hostinger — Club CRM
+# Struttura Hostinger — Club CRM (dominio singolo)
 
 Guida alla disposizione file su **Hostinger shared hosting** per:
 
-| Host | Ruolo |
-|------|-------|
+| URL | Ruolo |
+|-----|-------|
 | `https://club.backclub.it` | SPA React (build statico) |
-| `https://api.club.backclub.it` | API Laravel 13 |
+| `https://club.backclub.it/api` | API Laravel 13 |
+
+**Nessun sottodominio** `api.club.backclub.it`. Tutto sotto `club.backclub.it`.
 
 Repository: [BackSoftwareJR/club-backclub](https://github.com/BackSoftwareJR/club-backclub)
 
 ---
 
-## Albero cartelle consigliato
+## Albero cartelle su Hostinger
 
 ```
-/home/uXXXXX/
+/home/uXXXXX/domains/club.backclub.it/
 │
-├── club-crm/                              ← clone Git (monorepo, NON web-accessible)
-│   ├── backend/                           ← root Laravel (artisan, .env, vendor/)
-│   │   ├── app/
-│   │   ├── bootstrap/
-│   │   ├── config/
-│   │   ├── database/
-│   │   ├── public/                        ← unica cartella Laravel esposta al web
-│   │   │   ├── index.php
-│   │   │   └── .htaccess
-│   │   ├── routes/
-│   │   ├── storage/
-│   │   ├── vendor/
-│   │   └── .env                           ← SEGRETI — mai in public_html
-│   ├── frontend/                          ← sorgenti (non serviti in produzione)
-│   └── docs/
+├── public_html/                         ← DOCUMENT ROOT (unica cartella web-accessible)
+│   ├── index.html                       ← React SPA (frontend/dist/)
+│   ├── assets/                          ← bundle JS/CSS
+│   ├── .htaccess                        ← SPA fallback + pass-through /api
+│   └── api/                             ← SOLO entry point Laravel (public/)
+│       ├── index.php                    ← bootstrap da ../../api/
+│       └── .htaccess                    ← rewrite Laravel standard
 │
-├── domains/
-│   ├── club.backclub.it/
-│   │   └── public_html/                   ← contenuto di frontend/dist/
-│   │       ├── index.html
-│   │       ├── assets/
-│   │       └── .htaccess                  ← da docs/hostinger/spa-root.htaccess
-│   │
-│   └── api.club.backclub.it/
-│       └── public_html/                   ← opzione B: copia/symlink di backend/public/
-│           ├── index.php
-│           └── .htaccess
-│
-└── .ssh/                                  ← chiavi SSH (solo utente)
+└── api/                                 ← Laravel app root FUORI public_html
+    ├── app/, bootstrap/, config/, routes/
+    ├── storage/, vendor/
+    ├── artisan
+    └── .env                             ← SEGRETI — mai in public_html
 ```
 
-### Variante compatta (Laravel root = `club-crm`)
+### Perché questa struttura
 
-Se preferisci non tenere la sottocartella `backend/` sul server, puoi copiare **solo** il contenuto di `backend/` in `~/club-crm/` (senza il prefisso `backend/`). In quel caso `HOSTINGER_BACKEND_PATH=/home/uXXXXX/club-crm`. Il monorepo resta clonato altrove o si aggiorna via rsync da CI.
+| Vincolo Hostinger | Soluzione |
+|-------------------|-----------|
+| `public_html` è document root e **non si può cambiare** | SPA + `public_html/api/index.php` dentro `public_html` |
+| File sensibili fuori dal web root | Laravel completo in `domains/club.backclub.it/api/` |
+| API su `/api` senza sottodominio | `API_ROUTE_PREFIX=` (vuoto) + `index.php` che rimuove il prefisso URL `/api` |
+
+---
+
+## Flusso richiesta HTTP
+
+```
+Browser
+   │
+   ├─ GET /entry/1/NFC-OWNER-001     → public_html/.htaccess → index.html (SPA)
+   │
+   └─ GET /api/entry/1/NFC-OWNER-001 → public_html/api/.htaccess → index.php
+                                            │
+                                            ▼
+                                     strip /api prefix
+                                            │
+                                            ▼
+                              Laravel route: /entry/{club_id}/{nfc_uid}
+                              (API_ROUTE_PREFIX vuoto in produzione)
+```
+
+### Routing fix (no doppio `/api/api/`)
+
+In sviluppo locale, Laravel usa il prefisso route predefinito `api` → `http://localhost:8000/api/entry/...`.
+
+In produzione Hostinger, la cartella fisica **è già** `/api/`. Se Laravel aggiungesse anche il prefisso route `api`, l'URL diventerebbe `/api/api/entry/...`.
+
+**Soluzione:**
+
+1. `API_ROUTE_PREFIX=` (vuoto) nel `.env` di produzione
+2. `public_html/api/index.php` rimuove `/api` dall'URI prima del bootstrap Laravel
+3. Frontend: `VITE_API_URL=https://club.backclub.it/api` — axios chiama `/entry/...` → URL completo `club.backclub.it/api/entry/...`
 
 ---
 
@@ -60,145 +81,82 @@ Se preferisci non tenere la sottocartella `backend/` sul server, puoi copiare **
                         │
                         ▼
               ┌─────────────────────┐
-              │   public_html       │  ← solo file pubblici (index.php, assets SPA)
+              │   public_html       │  ← solo SPA + api/index.php
               │   (document root)   │
               └──────────┬──────────┘
                          │
-         ┌───────────────┴───────────────┐
-         │                               │
-   SPA statica                    Laravel public/
-   (HTML/JS/CSS)                  index.php → bootstrap
-                                         │
-                                         ▼
-                              ┌──────────────────┐
-                              │  club-crm/backend │  ← NON raggiungibile via URL
-                              │  .env, vendor,    │
-                              │  storage, config  │
-                              └──────────────────┘
+              public_html/api/index.php
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │  domains/.../api/    │  ← NON raggiungibile via URL diretto
+              │  .env, vendor,         │
+              │  storage, config     │
+              └──────────────────────┘
 ```
 
 | File/cartella | Perché NON in `public_html` |
 |---------------|----------------------------|
-| `.env` | Contiene password DB, `APP_KEY`, chiavi JWT e Canopywave |
+| `.env` | Password DB, `APP_KEY`, chiavi JWT e Canopywave |
 | `vendor/` | Codice Composer; esporlo aumenta superficie d'attacco |
 | `storage/` | Log, cache, upload utenti |
-| `config/`, `app/`, `routes/` | Logica applicativa — Laravel espone solo `public/` |
-
-Se un visitatore potesse scaricare `.env`, avrebbe accesso completo al database.
-
----
-
-## Esporre l'API: due opzioni
-
-### Opzione A — Document root verso `backend/public` (consigliata)
-
-In **hPanel → Domini → api.club.backclub.it → Document root**, imposta:
-
-```
-/home/uXXXXX/club-crm/backend/public
-```
-
-**Vantaggi:** nessuna copia da mantenere; `git pull` + `composer install` aggiornano tutto; symlink non necessario.
-
-**Svantaggi:** su alcuni piani Hostinger il path deve restare sotto `domains/.../public_html` — verifica nel pannello se accetta path personalizzati fuori da `public_html`.
-
-### Opzione B — `public_html` del sottodominio API
-
-Se hPanel **non** permette di puntare fuori da `domains/.../public_html`:
-
-1. **Copia** (rsync) il contenuto di `backend/public/` in  
-   `domains/api.club.backclub.it/public_html/`
-2. Modifica `index.php` in `public_html` se i path relativi non coincidono — Laravel di default risale di una cartella; se la root Laravel è `~/club-crm/backend`, copiare solo `public/` **rompe** i path.
-
-   **Soluzione corretta con copia:** usare symlink o un `index.php` ad hoc. Meglio:
-
-3. **Symlink** (se SSH lo consente):
-
-```bash
-# Da eseguire UNA volta via SSH
-rm -rf ~/domains/api.club.backclub.it/public_html/*
-ln -sf ~/club-crm/backend/public/* ~/domains/api.club.backclub.it/public_html/
-# oppure symlink dell'intera cartella public
-rm -rf ~/domains/api.club.backclub.it/public_html
-ln -s ~/club-crm/backend/public ~/domains/api.club.backclub.it/public_html
-```
-
-#### Limitazioni symlink su shared hosting
-
-| Aspetto | Nota |
-|---------|------|
-| `FollowSymLinks` | Apache deve averlo abilitato (di solito sì su Hostinger) |
-| hPanel “Document root” | Deve puntare a `public_html` che contiene il symlink |
-| Backup hPanel | A volte non segue symlink — backup manuale del codice |
-| Sicurezza | Il symlink **non** espone `.env` se punta solo a `public/` |
-| Piano economico | Alcuni piani disabilitano symlink — usa Opzione A o script rsync |
-
-Se symlink fallisce, usa **Opzione A** o uno script post-deploy che rsync `backend/public/` → `HOSTINGER_API_PUBLIC_PATH`.
+| `config/`, `app/`, `routes/` | Logica applicativa |
 
 ---
 
 ## SSL (HTTPS)
 
-1. hPanel → **SSL** → attiva **Free SSL** per:
-   - `club.backclub.it`
-   - `api.club.backclub.it`
+1. hPanel → **SSL** → attiva **Free SSL** per `club.backclub.it`
 2. Forza HTTPS (toggle hPanel o regole `.htaccess`)
 3. Verifica:
 
 ```bash
 curl -sI https://club.backclub.it | head -3
-curl -sI https://api.club.backclub.it/up | head -3
+curl -s https://club.backclub.it/api/up
 ```
 
 ---
 
-## CORS e comunicazione SPA ↔ API
+## Variabili ambiente produzione
 
-```
-┌─────────────────────────┐         HTTPS          ┌──────────────────────────┐
-│  club.backclub.it       │  ──── fetch /api ────►  │  api.club.backclub.it    │
-│  (origine browser)      │  ◄── JSON + CORS ────   │  (Laravel)               │
-└─────────────────────────┘                          └──────────────────────────┘
-```
-
-Nel `.env` del backend (creato manualmente sul server da `.env.production.example`):
+### Backend (`domains/club.backclub.it/api/.env`)
 
 ```dotenv
-APP_URL=https://api.club.backclub.it
+APP_URL=https://club.backclub.it
+API_ROUTE_PREFIX=
+
 FRONTEND_URL=https://club.backclub.it
 CORS_ALLOWED_ORIGINS=https://club.backclub.it
 ```
 
-Nel build frontend (`frontend/.env.production`):
+SPA e API sono **same-origin** (`club.backclub.it`) — CORS è meno critico ma `FRONTEND_URL` resta documentato.
+
+### Frontend (`frontend/.env.production` prima del build)
 
 ```dotenv
-VITE_API_URL=https://api.club.backclub.it/api
+VITE_API_URL=https://club.backclub.it/api
 ```
 
 Dopo ogni modifica al `.env` sul server:
 
 ```bash
-cd ~/club-crm/backend && php artisan config:cache
+cd ~/domains/club.backclub.it/api && php artisan config:cache
 ```
 
 ---
 
 ## URL NFC (produzione)
 
-Programma i tag NFC con:
-
 ```
 https://club.backclub.it/entry/{club_id}/{nfc_uid}
 ```
-
-Esempi (club `id = 1` dopo seed):
 
 | Ruolo | URL |
 |-------|-----|
 | Owner | `https://club.backclub.it/entry/1/NFC-OWNER-001` |
 | Member | `https://club.backclub.it/entry/1/NFC-MEMBER-001` |
 
-La SPA gestisce il routing client-side; l'API risponde su `https://api.club.backclub.it/api/entry/...`.
+La SPA gestisce il routing client-side; l'API risponde su `https://club.backclub.it/api/entry/...`.
 
 ---
 
@@ -207,7 +165,7 @@ La SPA gestisce il routing client-side; l'API risponde su `https://api.club.back
 **Non committare mai** il `.env` di produzione. Sul server, una tantum:
 
 ```bash
-cd ~/club-crm/backend
+cd ~/domains/club.backclub.it/api
 cp .env.production.example .env
 php artisan key:generate
 # Modifica DB_* con le credenziali MySQL create in hPanel
@@ -224,15 +182,27 @@ Template completo: [`backend/.env.production.example`](../backend/.env.productio
 ```
 Locale / GitHub Actions          Hostinger
 ─────────────────────           ─────────
-git push ─────────────────────► git pull (backend)
-npm run build                   rsync dist → club public_html
-php artisan test (CI)           composer install --no-dev
+php artisan test (CI)           rsync backend/ → domains/.../api/
+npm run build                   rsync dist/ → public_html/
+                                scp index.php + .htaccess → public_html/api/
+                                scp public_html.htaccess → public_html/
+                                composer install --no-dev
                                 php artisan migrate --force
                                 php artisan config:cache
 ```
 
 Script locali: [`../scripts/deploy.sh`](../scripts/deploy.sh)  
 CI/CD: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
+
+---
+
+## File Apache (docs/hostinger/)
+
+| File | Destinazione su server |
+|------|------------------------|
+| [`public_html.htaccess`](hostinger/public_html.htaccess) | `public_html/.htaccess` |
+| [`laravel-public-index.php`](hostinger/laravel-public-index.php) | `public_html/api/index.php` |
+| [`laravel-public.htaccess`](hostinger/laravel-public.htaccess) | `public_html/api/.htaccess` |
 
 ---
 

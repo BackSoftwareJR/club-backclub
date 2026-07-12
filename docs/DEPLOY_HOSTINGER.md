@@ -1,24 +1,22 @@
 # Deploying Club CRM on Hostinger — club.backclub.it
 
-Production guide for **Club CRM** on Hostinger shared hosting.
+Production guide for **Club CRM** on Hostinger shared hosting with a **single domain** layout.
 
-## Architecture (chosen)
+## Architecture
 
-| Host | Purpose | Document root |
-|------|---------|---------------|
+| URL | Purpose | Server path |
+|-----|---------|-------------|
 | `https://club.backclub.it` | React SPA (static `frontend/dist/`) | `domains/club.backclub.it/public_html/` |
-| `https://api.club.backclub.it` | Laravel 13 API (`/api/*` routes) | `backend/public/` |
+| `https://club.backclub.it/api` | Laravel 13 API | `public_html/api/index.php` → `domains/club.backclub.it/api/` |
 
-**Why a subdomain for the API?** On Hostinger shared hosting, separate subdomains are simpler than mixing SPA fallback and Laravel routing on one domain. Each host has its own document root, standard `.htaccess` rules, and independent SSL. CORS is explicit and predictable.
-
-Alternative same-domain `/api` routing is documented in [docs/hostinger/same-domain-root.htaccess](hostinger/same-domain-root.htaccess) but **not recommended** for this project.
+**No `api.club.backclub.it` subdomain.** Hostinger shared hosting uses a fixed `public_html` document root — the Laravel app lives outside it at `domains/club.backclub.it/api/`, with only `index.php` + `.htaccess` exposed under `public_html/api/`.
 
 ```
 Browser → club.backclub.it (SPA)
-              ↓ API calls
-         api.club.backclub.it/api/...
+              ↓ API calls (same origin)
+         club.backclub.it/api/entry/...
               ↓
-         Laravel backend/public/index.php
+         public_html/api/index.php → ../../api/ (Laravel)
 ```
 
 ## 1. DNS (Hostinger hPanel)
@@ -28,11 +26,10 @@ In **Domains → DNS / Nameservers** for `backclub.it`:
 | Type | Name | Value | TTL |
 |------|------|-------|-----|
 | A | `club` | Hostinger server IP | 14400 |
-| A | `api.club` | Same server IP | 14400 |
 
-Or create both as **subdomains** in hPanel (Hostinger adds DNS automatically).
+Or create `club.backclub.it` as a subdomain in hPanel (DNS added automatically).
 
-Wait for propagation (minutes to a few hours). Enable **Free SSL** for both hostnames.
+Wait for propagation. Enable **Free SSL** for `club.backclub.it`.
 
 ## 2. MySQL database
 
@@ -44,37 +41,30 @@ Wait for propagation (minutes to a few hours). Enable **Free SSL** for both host
 
 ## 3. Server folder layout
 
-Recommended structure on the Hostinger account:
-
 ```
-/home/your_user/
-├── club-crm-backend/              # Laravel app (NOT web-accessible)
-│   ├── app/
-│   ├── bootstrap/
-│   ├── config/
-│   ├── database/
-│   ├── public/                    # ← document root for api.club.backclub.it
-│   ├── routes/
-│   ├── storage/
-│   ├── vendor/
-│   └── .env                       # secrets — never in public_html
+/home/your_user/domains/club.backclub.it/
+├── public_html/                   ← document root (cannot be changed)
+│   ├── index.html                 ← SPA
+│   ├── assets/
+│   ├── .htaccess                  ← from docs/hostinger/public_html.htaccess
+│   └── api/
+│       ├── index.php                ← from docs/hostinger/laravel-public-index.php
+│       └── .htaccess                ← from docs/hostinger/laravel-public.htaccess
 │
-└── domains/
-    └── club.backclub.it/
-        └── public_html/           # ← SPA (frontend/dist/ contents)
-            ├── index.html
-            ├── assets/
-            └── .htaccess          # from docs/hostinger/spa-root.htaccess
+└── api/                           ← Laravel app (NOT web-accessible)
+    ├── app/, bootstrap/, config/
+    ├── storage/, vendor/
+    └── .env                       ← secrets — never in public_html
 ```
 
-Upload `backend/` via SFTP/Git deploy. Point `api.club.backclub.it` document root to `club-crm-backend/public`.
+Run [`scripts/hostinger-first-setup.sh`](../scripts/hostinger-first-setup.sh) once via SSH, or follow the manual steps below.
 
 ## 4. Backend setup
 
 SSH or Hostinger terminal:
 
 ```bash
-cd ~/club-crm-backend
+cd ~/domains/club.backclub.it/api
 composer install --no-dev --optimize-autoloader
 cp .env.production.example .env
 php artisan key:generate
@@ -88,7 +78,10 @@ Use [backend/.env.production.example](../backend/.env.production.example) as the
 APP_NAME="Club CRM"
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://api.club.backclub.it
+APP_URL=https://club.backclub.it
+
+# Empty — Laravel is mounted at public_html/api/, URL path /api is the folder not a route prefix
+API_ROUTE_PREFIX=
 
 DB_CONNECTION=mysql
 DB_HOST=localhost
@@ -130,19 +123,25 @@ php artisan route:cache
 
 Ensure `storage/` and `bootstrap/cache/` are writable by the web server user.
 
-### API `.htaccess`
+### API entry files
 
-`backend/public/.htaccess` is included in the repo. If missing on the server, copy [docs/hostinger/laravel-public.htaccess](hostinger/laravel-public.htaccess).
+Copy deploy templates to the server (done automatically by `deploy.sh` / GitHub Actions):
+
+| Template | Server path |
+|----------|-------------|
+| `docs/hostinger/laravel-public-index.php` | `public_html/api/index.php` |
+| `docs/hostinger/laravel-public.htaccess` | `public_html/api/.htaccess` |
+| `docs/hostinger/public_html.htaccess` | `public_html/.htaccess` |
 
 ## 5. Cron jobs
 
 Laravel scheduler + database queue worker (defined in `backend/routes/console.php`):
 
 ```cron
-* * * * * cd /home/your_user/club-crm-backend && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /home/your_user/domains/club.backclub.it/api && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Replace `/home/your_user/club-crm-backend` with your actual path. The scheduler runs `queue:work database --stop-when-empty --max-time=55` every minute — suitable for shared hosting without a persistent daemon.
+Replace the path with your actual `HOSTINGER_LARAVEL_PATH`.
 
 ## 6. Frontend (static SPA)
 
@@ -158,20 +157,20 @@ npm run build
 `frontend/.env.production` must contain:
 
 ```dotenv
-VITE_API_URL=https://api.club.backclub.it/api
+VITE_API_URL=https://club.backclub.it/api
 ```
 
 Upload **contents** of `frontend/dist/` to `domains/club.backclub.it/public_html/`.
 
-Copy [docs/hostinger/spa-root.htaccess](hostinger/spa-root.htaccess) to `public_html/.htaccess` for React Router client-side routing.
+Copy [docs/hostinger/public_html.htaccess](hostinger/public_html.htaccess) to `public_html/.htaccess` for React Router client-side routing and `/api` pass-through.
 
 See [docs/hostinger/README.md](hostinger/README.md) for file placement details.
 
 ## 7. CORS and HTTPS
 
-- Backend `config/cors.php` reads `CORS_ALLOWED_ORIGINS` — must include `https://club.backclub.it`
-- Both hosts must use HTTPS (Hostinger Free SSL)
-- `FRONTEND_URL` documents the SPA origin; it is not used for routing
+- SPA and API share origin `https://club.backclub.it` — CORS is less critical but `CORS_ALLOWED_ORIGINS` is still set
+- `FRONTEND_URL` documents the SPA origin
+- Force HTTPS via Hostinger Free SSL
 
 ## 8. NFC card URLs
 
@@ -190,10 +189,10 @@ Examples (after seeding club `id = 1`):
 
 ```bash
 # API health
-curl -s https://api.club.backclub.it/up
+curl -s https://club.backclub.it/api/up
 
 # Entry endpoint (no auth)
-curl -s https://api.club.backclub.it/api/entry/1/NFC-OWNER-001
+curl -s https://club.backclub.it/api/entry/1/NFC-OWNER-001
 
 # SPA loads
 curl -sI https://club.backclub.it | head -5
@@ -203,7 +202,7 @@ Browser checks:
 
 - [ ] SPA loads at `https://club.backclub.it`
 - [ ] NFC entry URL opens PIN screen
-- [ ] Login succeeds (CORS working)
+- [ ] Login succeeds
 - [ ] Admin dashboard reachable for owner card
 - [ ] Cron active in hPanel
 
@@ -213,15 +212,15 @@ Full checklist: [DEPLOY_CHECKLIST.md](DEPLOY_CHECKLIST.md)
 
 - Keep `APP_DEBUG=false` in production
 - Never commit `.env` — only `.env.example` and `.env.production.example`
-- Block web access to `backend/.env`, `backend/storage`, and everything above `public/`
+- Never place `.env`, `vendor/`, or `storage/` inside `public_html`
+- `public_html/api/` contains **only** `index.php` and `.htaccess`
 - Rotate `APP_KEY` and database passwords if ever exposed
-- Use Hostinger **IP deny** or file permissions to protect sensitive paths
 
 ## Related docs
 
-- [HOSTINGER_STRUCTURE.md](HOSTINGER_STRUCTURE.md) — struttura cartelle, diagrammi, symlink vs document root
+- [HOSTINGER_STRUCTURE.md](HOSTINGER_STRUCTURE.md) — folder layout, routing fix, diagrams
 - [DEPLOY_CHECKLIST.md](DEPLOY_CHECKLIST.md) — ordered deploy-day checklist
-- [`scripts/deploy.sh`](../scripts/deploy.sh) — deploy locale con comandi SSH
-- [`scripts/hostinger-first-setup.sh`](../scripts/hostinger-first-setup.sh) — setup iniziale server
+- [`scripts/deploy.sh`](../scripts/deploy.sh) — local deploy with SSH commands
+- [`scripts/hostinger-first-setup.sh`](../scripts/hostinger-first-setup.sh) — initial server setup
 - [hostinger/README.md](hostinger/README.md) — Apache `.htaccess` placement
 - [CANOPYWAVE_SETUP.md](CANOPYWAVE_SETUP.md) — AI integration keys

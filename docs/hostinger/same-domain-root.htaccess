@@ -1,6 +1,5 @@
-# OPTIONAL — same-domain layout (club.backclub.it for SPA + /api for Laravel)
-# Not used in the recommended club.backclub.it deployment.
-# Requires custom Hostinger folder layout; prefer api.club.backclub.it instead.
+# DEPRECATED — replaced by public_html.htaccess (single-domain layout)
+# See docs/hostinger/public_html.htaccess
 
 <IfModule mod_rewrite.c>
   RewriteEngine On

@@ -1,34 +1,45 @@
 # Hostinger Apache config snippets
 
-Club CRM production uses **two subdomains** on the same Hostinger account:
+Club CRM production uses a **single domain** on Hostinger shared hosting:
 
-| Subdomain | Document root | Config file from this folder |
-|-----------|---------------|------------------------------|
-| `club.backclub.it` | SPA static files (`frontend/dist/`) | [`spa-root.htaccess`](spa-root.htaccess) |
-| `api.club.backclub.it` | Laravel `backend/public/` | Use Laravel default — [`laravel-public.htaccess`](laravel-public.htaccess) |
+| URL | Server path | Config file |
+|-----|-------------|-------------|
+| `https://club.backclub.it` | SPA (`frontend/dist/`) | [`public_html.htaccess`](public_html.htaccess) |
+| `https://club.backclub.it/api` | Laravel entry (`public_html/api/`) | [`laravel-public-index.php`](laravel-public-index.php) + [`laravel-public.htaccess`](laravel-public.htaccess) |
+
+Laravel app root (`app/`, `.env`, `vendor/`, `storage/`) lives at `domains/club.backclub.it/api/` — **outside** `public_html`.
 
 ## Where to place each file
 
-### SPA — `club.backclub.it`
+### SPA root — `public_html/`
 
 1. Build locally: `cd frontend && cp .env.production.example .env.production && npm run build`
-2. Upload **contents** of `frontend/dist/` to the subdomain document root (e.g. `domains/club.backclub.it/public_html/`).
-3. Copy `docs/hostinger/spa-root.htaccess` to that folder as **`.htaccess`**.
+2. Upload **contents** of `frontend/dist/` to `domains/club.backclub.it/public_html/`.
+3. Copy `docs/hostinger/public_html.htaccess` to that folder as **`.htaccess`**.
 
-This enables React Router client-side routes (`/entry/...`, `/club/...`, etc.).
+This enables React Router client-side routes (`/entry/...`, `/club/...`, etc.) and passes `/api/*` through to the Laravel entry point.
 
-### API — `api.club.backclub.it`
+### API entry — `public_html/api/`
 
-1. Upload the full `backend/` tree **outside** `public_html` when possible (e.g. `~/club-crm-backend/`).
-2. In hPanel → **Domains** → `api.club.backclub.it` → set document root to `backend/public/`.
-3. Laravel ships `backend/public/.htaccess`; replace only if missing. The copy in `laravel-public.htaccess` matches the default.
+1. Deploy Laravel app to `domains/club.backclub.it/api/` (outside `public_html`).
+2. Copy `docs/hostinger/laravel-public-index.php` → `public_html/api/index.php`
+3. Copy `docs/hostinger/laravel-public.htaccess` → `public_html/api/.htaccess`
 
-Do **not** expose `backend/storage`, `backend/.env`, or any path above `public/`.
+Do **not** expose `api/.env`, `api/storage`, `api/vendor`, or any path above `public_html/api/index.php`.
 
-### Same-domain alternative (not used in production)
+### Legacy files (deprecated)
 
-If you ever serve API and SPA from `club.backclub.it` (SPA at `/`, API at `/api`), use [`same-domain-root.htaccess`](same-domain-root.htaccess) at the combined document root and point Laravel to a subdirectory. The recommended setup avoids this complexity — see [DEPLOY_HOSTINGER.md](../DEPLOY_HOSTINGER.md).
+| File | Status |
+|------|--------|
+| [`spa-root.htaccess`](spa-root.htaccess) | Replaced by `public_html.htaccess` (no `/api` pass-through) |
+| [`same-domain-root.htaccess`](same-domain-root.htaccess) | Replaced by `public_html.htaccess` |
 
 ## SSL
 
-Enable **Free SSL** in Hostinger hPanel for both `club.backclub.it` and `api.club.backclub.it`. Force HTTPS in hPanel or add redirect rules if needed.
+Enable **Free SSL** in Hostinger hPanel for `club.backclub.it`. Force HTTPS in hPanel or add redirect rules if needed.
+
+## Routing note
+
+Production `.env` sets `API_ROUTE_PREFIX=` (empty). The `index.php` template strips the `/api` URL prefix before Laravel routing, so external URLs like `club.backclub.it/api/entry/...` map to internal route `/entry/...` without a double `/api/api/` prefix.
+
+See [HOSTINGER_STRUCTURE.md](../HOSTINGER_STRUCTURE.md) for the full explanation.

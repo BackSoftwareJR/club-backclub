@@ -1,5 +1,6 @@
-# Laravel API — place as .htaccess in api.club.backclub.it document root
-# (backend/public/). Identical to backend/public/.htaccess shipped with Laravel.
+# Laravel API — place as public_html/api/.htaccess
+# (Laravel public entry; app root is ../../api/ outside public_html).
+# Identical to backend/public/.htaccess shipped with Laravel.
 
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>

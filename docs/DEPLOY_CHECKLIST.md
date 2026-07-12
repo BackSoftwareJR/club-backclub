@@ -2,6 +2,8 @@
 
 Checklist ordinata per il go-live e gli aggiornamenti successivi.
 
+**Dominio singolo:** SPA + API su `club.backclub.it` (nessun `api.club.backclub.it`).
+
 **Struttura server:** [HOSTINGER_STRUCTURE.md](HOSTINGER_STRUCTURE.md)  
 **Deploy locale:** `./scripts/deploy.sh`  
 **CI/CD GitHub:** [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
@@ -29,10 +31,10 @@ cp scripts/deploy.config.example scripts/deploy.config
 ## DNS & SSL
 
 - [ ] A record: `club.backclub.it` → IP server Hostinger
-- [ ] A record: `api.club.backclub.it` → stesso IP
-- [ ] DNS propagato (`dig club.backclub.it`, `dig api.club.backclub.it`)
-- [ ] SSL gratuito attivo per entrambi i sottodomini
+- [ ] DNS propagato (`dig club.backclub.it`)
+- [ ] SSL gratuito attivo per `club.backclub.it`
 - [ ] Redirect HTTPS attivo (hPanel o `.htaccess`)
+- [ ] **Nessun** record per `api.club.backclub.it` (non usato)
 
 ---
 
@@ -49,19 +51,21 @@ cp scripts/deploy.config.example scripts/deploy.config
 
 - [ ] SSH attivo su Hostinger
 - [ ] Eseguito [`scripts/hostinger-first-setup.sh`](../scripts/hostinger-first-setup.sh) oppure passi manuali equivalenti
-- [ ] Monorepo clonato in `~/club-crm`
+- [ ] Laravel root in `~/domains/club.backclub.it/api/` (fuori `public_html`)
+- [ ] Entry point in `~/domains/club.backclub.it/public_html/api/` (solo `index.php` + `.htaccess`)
 - [ ] `.env` creato da `backend/.env.production.example` con credenziali DB reali
 - [ ] `php artisan key:generate` eseguito
-- [ ] Document root API → `~/club-crm/backend/public` **oppure** symlink/rsync su `api.../public_html`
+- [ ] `public_html/.htaccess` da `docs/hostinger/public_html.htaccess`
 - [ ] Cron scheduler configurato (vedi script setup)
 
 ---
 
-## Backend (`api.club.backclub.it`)
+## Backend (`club.backclub.it/api`)
 
-- [ ] Laravel root in `~/club-crm/backend` (fuori da `public_html` del frontend)
+- [ ] Laravel root in `~/domains/club.backclub.it/api/`
 - [ ] `.env` con:
-  - [ ] `APP_URL=https://api.club.backclub.it`
+  - [ ] `APP_URL=https://club.backclub.it`
+  - [ ] `API_ROUTE_PREFIX=` (vuoto)
   - [ ] `APP_ENV=production`, `APP_DEBUG=false`
   - [ ] `DB_*` credenziali Hostinger
   - [ ] `FRONTEND_URL=https://club.backclub.it`
@@ -72,8 +76,8 @@ cp scripts/deploy.config.example scripts/deploy.config
 - [ ] `php artisan storage:link`
 - [ ] `storage/` e `bootstrap/cache/` scrivibili (775)
 - [ ] `php artisan config:cache` e `php artisan route:cache`
-- [ ] `GET https://api.club.backclub.it/up` — healthy
-- [ ] `GET https://api.club.backclub.it/api/entry/1/NFC-OWNER-001` — JSON
+- [ ] `GET https://club.backclub.it/api/up` — healthy
+- [ ] `GET https://club.backclub.it/api/entry/1/NFC-OWNER-001` — JSON
 
 ---
 
@@ -82,17 +86,18 @@ cp scripts/deploy.config.example scripts/deploy.config
 Copy-paste da `./scripts/deploy.sh` oppure:
 
 ```bash
-ssh USER@HOST "cd ~/club-crm && git pull && cd ~/club-crm/backend && composer install --no-dev --optimize-autoloader && php artisan migrate --force && php artisan config:cache && php artisan route:cache"
+rsync -avz --delete --exclude '.env' --exclude 'public/' backend/ USER@HOST:~/domains/club.backclub.it/api/
+ssh USER@HOST "cd ~/domains/club.backclub.it/api && composer install --no-dev --optimize-autoloader && php artisan migrate --force && php artisan config:cache && php artisan route:cache"
 ```
 
 ---
 
 ## Frontend (`club.backclub.it`)
 
-- [ ] `VITE_API_URL=https://api.club.backclub.it/api` in `.env.production`
+- [ ] `VITE_API_URL=https://club.backclub.it/api` in `.env.production`
 - [ ] Build locale: `npm run build`
 - [ ] Rsync `frontend/dist/` → `domains/club.backclub.it/public_html/`
-- [ ] `docs/hostinger/spa-root.htaccess` come `public_html/.htaccess`
+- [ ] `docs/hostinger/public_html.htaccess` come `public_html/.htaccess`
 - [ ] `https://club.backclub.it` carica
 - [ ] Deep link: `https://club.backclub.it/entry/1/NFC-OWNER-001`
 
@@ -113,9 +118,10 @@ In **Settings → Secrets and variables → Actions**, aggiungi:
 | `HOSTINGER_SSH_HOST` | `ssh.hostinger.com` |
 | `HOSTINGER_SSH_USER` | `u123456789` |
 | `HOSTINGER_SSH_KEY` | chiave privata SSH (PEM) |
-| `HOSTINGER_BACKEND_PATH` | `/home/u123456789/club-crm/backend` |
-| `HOSTINGER_FRONTEND_PATH` | `/home/u123456789/domains/club.backclub.it/public_html` |
-| `HOSTINGER_API_PUBLIC_PATH` | *(opzionale)* path `api.../public_html` |
+| `HOSTINGER_LARAVEL_PATH` | `/home/u123456789/domains/club.backclub.it/api` |
+| `HOSTINGER_PUBLIC_HTML` | `/home/u123456789/domains/club.backclub.it/public_html` |
+
+Alias legacy ancora accettati: `HOSTINGER_BACKEND_PATH`, `HOSTINGER_FRONTEND_PATH`.
 
 Il job `deploy-ssh` parte automaticamente quando **tutti** i secret obbligatori sono impostati.  
 Trigger: push su `main` (path `backend/`, `frontend/`) o **Run workflow** manuale.
@@ -131,7 +137,7 @@ Artifact CI (senza SSH): scaricabili da Actions → workflow **Deploy** → Arti
 - [ ] Saldo wallet visibile
 - [ ] Lista prodotti carica
 - [ ] Dashboard admin accessibile
-- [ ] Nessun errore CORS in console browser
+- [ ] Nessun errore in console browser
 - [ ] Endpoint AI rispondono (o fallback silenzioso)
 
 ---

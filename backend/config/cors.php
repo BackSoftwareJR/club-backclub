@@ -2,7 +2,15 @@
 
 return [
 
-    'paths' => ['api/*'],
+    'paths' => (static function (): array {
+        $prefix = env('API_ROUTE_PREFIX', 'api');
+
+        if ($prefix === '' || $prefix === null) {
+            return ['entry/*', 'auth/*', 'clubs/*', 'up'];
+        }
+
+        return [trim((string) $prefix, '/').'/*'];
+    })(),
 
     'allowed_methods' => ['*'],
 

@@ -42,14 +42,17 @@ cd "$ROOT"
 # --- Config opzionale ---
 SSH_USER="${HOSTINGER_SSH_USER:-u123456789}"
 SSH_HOST="${HOSTINGER_SSH_HOST:-ssh.hostinger.com}"
-BACKEND_PATH="${HOSTINGER_BACKEND_PATH:-/home/u123456789/club-crm/backend}"
-REPO_PATH="${HOSTINGER_REPO_PATH:-/home/u123456789/club-crm}"
-FRONTEND_PATH="${HOSTINGER_FRONTEND_PATH:-/home/u123456789/domains/club.backclub.it/public_html}"
-API_PUBLIC_PATH="${HOSTINGER_API_PUBLIC_PATH:-/home/u123456789/domains/api.club.backclub.it/public_html}"
+DOMAIN_PATH="${HOSTINGER_DOMAIN_PATH:-/home/u123456789/domains/club.backclub.it}"
+LARAVEL_PATH="${HOSTINGER_LARAVEL_PATH:-${HOSTINGER_BACKEND_PATH:-$DOMAIN_PATH/api}}"
+PUBLIC_HTML="${HOSTINGER_PUBLIC_HTML:-${HOSTINGER_FRONTEND_PATH:-$DOMAIN_PATH/public_html}}"
+API_PUBLIC_PATH="${HOSTINGER_API_PUBLIC_PATH:-$PUBLIC_HTML/api}"
 
 if [[ -f "$CONFIG_FILE" ]]; then
   # shellcheck source=/dev/null
   source "$CONFIG_FILE"
+  LARAVEL_PATH="${HOSTINGER_LARAVEL_PATH:-${HOSTINGER_BACKEND_PATH:-$LARAVEL_PATH}}"
+  PUBLIC_HTML="${HOSTINGER_PUBLIC_HTML:-${HOSTINGER_FRONTEND_PATH:-$PUBLIC_HTML}}"
+  API_PUBLIC_PATH="${HOSTINGER_API_PUBLIC_PATH:-$PUBLIC_HTML/api}"
   ok "Config caricata: scripts/deploy.config"
 else
   warn "scripts/deploy.config non trovato — uso placeholder (cp scripts/deploy.config.example scripts/deploy.config)"
@@ -131,22 +134,37 @@ echo -e "${BOLD}${GREEN}══════════════════�
 echo -e "${BOLD}  Comandi SSH per Hostinger (copy-paste)${NC}"
 echo -e "${BOLD}${GREEN}════════════════════════════════════════════════════════════${NC}"
 
-block "BACKEND UPDATE (git pull + composer + migrate + cache)" \
-"ssh ${SSH_TARGET} \"cd ${REPO_PATH} && git pull && cd ${BACKEND_PATH} && composer install --no-dev --optimize-autoloader && php artisan migrate --force && php artisan config:cache && php artisan route:cache\""
+block "LARAVEL APP UPDATE (rsync backend → api/ fuori public_html)" \
+"rsync -avz --delete \
+  --exclude '.env' \
+  --exclude '.env.*' \
+  --exclude 'storage/logs/' \
+  --exclude 'storage/framework/cache/data/' \
+  --exclude 'storage/framework/sessions/' \
+  --exclude 'storage/framework/views/' \
+  --exclude 'public/' \
+  ${ROOT}/backend/ ${SSH_TARGET}:${LARAVEL_PATH}/"
+
+block "LARAVEL POST-DEPLOY (composer + migrate + cache)" \
+"ssh ${SSH_TARGET} \"cd ${LARAVEL_PATH} && composer install --no-dev --optimize-autoloader && php artisan migrate --force && php artisan config:cache && php artisan route:cache\""
+
+block "API PUBLIC ENTRY (solo index.php + .htaccess in public_html/api/)" \
+"ssh ${SSH_TARGET} \"mkdir -p ${API_PUBLIC_PATH}\"
+scp ${ROOT}/docs/hostinger/laravel-public-index.php ${SSH_TARGET}:${API_PUBLIC_PATH}/index.php
+scp ${ROOT}/docs/hostinger/laravel-public.htaccess ${SSH_TARGET}:${API_PUBLIC_PATH}/.htaccess"
+
+block "SPA ROOT .htaccess (SPA fallback + pass-through /api)" \
+"scp ${ROOT}/docs/hostinger/public_html.htaccess ${SSH_TARGET}:${PUBLIC_HTML}/.htaccess"
 
 block "FRONTEND UPDATE (rsync da questa macchina)" \
-"rsync -avz --delete ${ROOT}/frontend/dist/ ${SSH_TARGET}:${FRONTEND_PATH}/"
-
-if [[ -n "${API_PUBLIC_PATH:-}" ]]; then
-  block "API PUBLIC SYNC (solo se document root NON punta a backend/public)" \
-"rsync -avz --delete ${ROOT}/backend/public/ ${SSH_TARGET}:${API_PUBLIC_PATH}/"
-fi
+"rsync -avz --delete ${ROOT}/frontend/dist/ ${SSH_TARGET}:${PUBLIC_HTML}/"
 
 block "MIGRATIONS ONLY" \
-"ssh ${SSH_TARGET} \"cd ${BACKEND_PATH} && php artisan migrate --force\""
+"ssh ${SSH_TARGET} \"cd ${LARAVEL_PATH} && php artisan migrate --force\""
 
 block "VERIFICA POST-DEPLOY" \
-"curl -s https://api.club.backclub.it/up
+"curl -s https://club.backclub.it/api/up
+curl -s https://club.backclub.it/api/entry/1/NFC-OWNER-001
 curl -sI https://club.backclub.it | head -5"
 
 echo ""

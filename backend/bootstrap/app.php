@@ -7,13 +7,26 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
+$apiRoutePrefix = env('API_ROUTE_PREFIX', 'api');
+
+$isApiRequest = static function (Request $request) use ($apiRoutePrefix): bool {
+    if ($apiRoutePrefix !== '' && $apiRoutePrefix !== null) {
+        return $request->is(trim((string) $apiRoutePrefix, '/').'/*');
+    }
+
+    return $request->is('entry/*')
+        || $request->is('auth/*')
+        || $request->is('clubs/*')
+        || $request->is('up');
+};
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
-        apiPrefix: 'api',
+        apiPrefix: $apiRoutePrefix === '' || $apiRoutePrefix === null ? '' : (string) $apiRoutePrefix,
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
@@ -24,17 +37,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'club.member.active' => \App\Http\Middleware\ClubMemberActiveMiddleware::class,
         ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
-        );
+    ->withExceptions(function (Exceptions $exceptions) use ($isApiRequest): void {
+        $exceptions->shouldRenderJsonWhen($isApiRequest);
 
         $exceptions->render(function (ApiException $exception, Request $request) {
             return $exception->render($request);
         });
 
-        $exceptions->render(function (ValidationException $exception, Request $request) {
-            if (! $request->is('api/*')) {
+        $exceptions->render(function (ValidationException $exception, Request $request) use ($isApiRequest) {
+            if (! $isApiRequest($request)) {
                 return null;
             }
 

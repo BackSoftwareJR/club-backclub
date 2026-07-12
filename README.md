@@ -2,7 +2,7 @@
 
 Financial and behavioral platform for private clubs. Members authenticate via **NFC card + 6-digit PIN** (no public self-registration). Purchases consume **virtual wallet credits**; real-world cash flow is tracked separately in the **Treasury** (`club_ledger`).
 
-**Production:** [club.backclub.it](https://club.backclub.it) (SPA) + [api.club.backclub.it](https://api.club.backclub.it) (API)
+**Production:** [club.backclub.it](https://club.backclub.it) — SPA + API at `/api`
 
 ## Architecture
 
@@ -107,7 +107,9 @@ Lo script esegue test, build frontend, push su GitHub e stampa i comandi SSH/rsy
 
 **Secret per auto-deploy SSH** (Settings → Secrets → Actions):
 
-`HOSTINGER_SSH_HOST`, `HOSTINGER_SSH_USER`, `HOSTINGER_SSH_KEY`, `HOSTINGER_BACKEND_PATH`, `HOSTINGER_FRONTEND_PATH`, `HOSTINGER_API_PUBLIC_PATH` (opzionale)
+`HOSTINGER_SSH_HOST`, `HOSTINGER_SSH_USER`, `HOSTINGER_SSH_KEY`, `HOSTINGER_LARAVEL_PATH`, `HOSTINGER_PUBLIC_HTML`
+
+Alias legacy: `HOSTINGER_BACKEND_PATH`, `HOSTINGER_FRONTEND_PATH`
 
 `frontend/dist/` non va committato — viene buildato in CI o localmente e caricato via rsync.
 
@@ -121,8 +123,8 @@ Lo script esegue test, build frontend, push su GitHub e stampa i comandi SSH/rsy
 | Service | URL |
 |---------|-----|
 | SPA | `https://club.backclub.it` |
-| API | `https://api.club.backclub.it` |
-| API base (frontend) | `https://api.club.backclub.it/api` |
+| API base (frontend) | `https://club.backclub.it/api` |
+| API health | `https://club.backclub.it/api/up` |
 | NFC entry | `https://club.backclub.it/entry/{club_id}/{nfc_uid}` |
 
 ## Publish to GitHub

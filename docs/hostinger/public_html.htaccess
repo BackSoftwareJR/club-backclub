@@ -1,11 +1,19 @@
-# Club CRM SPA — DEPRECATED: use public_html.htaccess instead
-# Kept for reference only. Does not pass /api requests to Laravel.
+# Club CRM — single-domain layout (club.backclub.it)
+# Place as public_html/.htaccess alongside the React SPA (frontend/dist/).
+#
+# Routes:
+#   /api/*  → public_html/api/index.php (Laravel, app root at ../../api/)
+#   /*      → SPA index.html (except existing files: assets/, favicon, etc.)
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
 
-  # Serve existing files and directories as-is
+  # Laravel API — let the api/ subdirectory handle /api/* requests
+  RewriteCond %{REQUEST_URI} ^/api
+  RewriteRule ^ - [L]
+
+  # Serve existing files and directories as-is (SPA assets, etc.)
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]

@@ -15,6 +15,7 @@ on:
       - 'frontend/**'
       - '.github/workflows/deploy.yml'
       - 'scripts/**'
+      - 'docs/hostinger/**'
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -79,6 +80,7 @@ jobs:
             --exclude '.env.*' \
             --exclude 'node_modules' \
             --exclude 'tests' \
+            --exclude 'public' \
             --exclude 'storage/logs/*' \
             --exclude 'storage/framework/cache/data/*' \
             --exclude 'storage/framework/sessions/*' \
@@ -101,18 +103,27 @@ jobs:
           path: deploy-bundle/backend/
           retention-days: 7
 
+      - name: Upload API entry artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-entry
+          path: |
+            docs/hostinger/laravel-public-index.php
+            docs/hostinger/laravel-public.htaccess
+            docs/hostinger/public_html.htaccess
+          retention-days: 7
+
   deploy-ssh:
     name: Deploy to Hostinger (SSH)
     needs: test-and-build
     runs-on: ubuntu-latest
-    # Abilitato solo quando i secret SSH sono configurati nel repository
     if: >-
       ${{
         secrets.HOSTINGER_SSH_HOST != '' &&
         secrets.HOSTINGER_SSH_USER != '' &&
         secrets.HOSTINGER_SSH_KEY != '' &&
-        secrets.HOSTINGER_BACKEND_PATH != '' &&
-        secrets.HOSTINGER_FRONTEND_PATH != ''
+        (secrets.HOSTINGER_LARAVEL_PATH != '' || secrets.HOSTINGER_BACKEND_PATH != '') &&
+        (secrets.HOSTINGER_PUBLIC_HTML != '' || secrets.HOSTINGER_FRONTEND_PATH != '')
       }}
     steps:
       - name: Download frontend artifact
@@ -127,6 +138,12 @@ jobs:
           name: backend-bundle
           path: deploy-bundle/backend/
 
+      - name: Download API entry artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-entry
+          path: docs/hostinger/
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
@@ -134,11 +151,21 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.HOSTINGER_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Deploy backend via rsync
+      - name: Resolve deploy paths
+        id: paths
+        env:
+          LARAVEL_PATH: ${{ secrets.HOSTINGER_LARAVEL_PATH || secrets.HOSTINGER_BACKEND_PATH }}
+          PUBLIC_HTML: ${{ secrets.HOSTINGER_PUBLIC_HTML || secrets.HOSTINGER_FRONTEND_PATH }}
+        run: |
+          echo "laravel_path=${LARAVEL_PATH}" >> "$GITHUB_OUTPUT"
+          echo "public_html=${PUBLIC_HTML}" >> "$GITHUB_OUTPUT"
+          echo "api_public=${PUBLIC_HTML}/api" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Laravel app via rsync
         env:
           SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
           SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
-          BACKEND_PATH: ${{ secrets.HOSTINGER_BACKEND_PATH }}
+          LARAVEL_PATH: ${{ steps.paths.outputs.laravel_path }}
         run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
@@ -148,13 +175,13 @@ jobs:
             --exclude 'storage/framework/sessions/' \
             --exclude 'storage/framework/views/' \
             deploy-bundle/backend/ \
-            "${SSH_USER}@${SSH_HOST}:${BACKEND_PATH}/"
+            "${SSH_USER}@${SSH_HOST}:${LARAVEL_PATH}/"
 
       - name: Post-deploy backend commands
         env:
           SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
           SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
-          BACKEND_PATH: ${{ secrets.HOSTINGER_BACKEND_PATH }}
+          LARAVEL_PATH: ${{ steps.paths.outputs.laravel_path }}
           RUN_MIGRATIONS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_migrations || 'true' }}
         run: |
           MIGRATE_CMD=""
@@ -163,28 +190,40 @@ jobs:
           fi
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
             "${SSH_USER}@${SSH_HOST}" \
-            "cd ${BACKEND_PATH} && composer install --no-dev --optimize-autoloader && ${MIGRATE_CMD} php artisan config:cache && php artisan route:cache"
+            "cd ${LARAVEL_PATH} && composer install --no-dev --optimize-autoloader && ${MIGRATE_CMD} php artisan config:cache && php artisan route:cache"
+
+      - name: Deploy API public entry (index.php + .htaccess)
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          API_PUBLIC_PATH: ${{ steps.paths.outputs.api_public }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            "${SSH_USER}@${SSH_HOST}" "mkdir -p ${API_PUBLIC_PATH}"
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            docs/hostinger/laravel-public-index.php \
+            "${SSH_USER}@${SSH_HOST}:${API_PUBLIC_PATH}/index.php"
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            docs/hostinger/laravel-public.htaccess \
+            "${SSH_USER}@${SSH_HOST}:${API_PUBLIC_PATH}/.htaccess"
+
+      - name: Deploy SPA root .htaccess
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          PUBLIC_HTML: ${{ steps.paths.outputs.public_html }}
+        run: |
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            docs/hostinger/public_html.htaccess \
+            "${SSH_USER}@${SSH_HOST}:${PUBLIC_HTML}/.htaccess"
 
       - name: Deploy frontend via rsync
         env:
           SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
           SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
-          FRONTEND_PATH: ${{ secrets.HOSTINGER_FRONTEND_PATH }}
+          PUBLIC_HTML: ${{ steps.paths.outputs.public_html }}
         run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
             frontend/dist/ \
-            "${SSH_USER}@${SSH_HOST}:${FRONTEND_PATH}/"
-
-      - name: Sync API public directory (optional)
-        if: ${{ secrets.HOSTINGER_API_PUBLIC_PATH != '' }}
-        env:
-          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
-          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
-          BACKEND_PATH: ${{ secrets.HOSTINGER_BACKEND_PATH }}
-          API_PUBLIC_PATH: ${{ secrets.HOSTINGER_API_PUBLIC_PATH }}
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
-            deploy-bundle/backend/public/ \
-            "${SSH_USER}@${SSH_HOST}:${API_PUBLIC_PATH}/"
+            "${SSH_USER}@${SSH_HOST}:${PUBLIC_HTML}/"
