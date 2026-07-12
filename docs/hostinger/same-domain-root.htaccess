@@ -1,0 +1,20 @@
+# OPTIONAL — same-domain layout (club.backclub.it for SPA + /api for Laravel)
+# Not used in the recommended club.backclub.it deployment.
+# Requires custom Hostinger folder layout; prefer api.club.backclub.it instead.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Laravel API — forward /api/* to backend/public/index.php
+  RewriteCond %{REQUEST_URI} ^/api
+  RewriteRule ^api/(.*)$ /api-backend/public/index.php [L,QSA]
+
+  # Static files in SPA root
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # SPA fallback
+  RewriteRule ^ index.html [L]
+</IfModule>

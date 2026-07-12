@@ -1,0 +1,28 @@
+# Dependencies
+backend/vendor/
+frontend/node_modules/
+
+# Environment (never commit secrets)
+.env
+.env.*
+!.env.example
+!.env.production.example
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# Build output
+frontend/dist/
+
+# Laravel
+backend/storage/*.key
+backend/.phpunit.result.cache
+backend/bootstrap/cache/*.php
+!backend/bootstrap/cache/.gitignore
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.log
