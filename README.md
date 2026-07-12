@@ -80,6 +80,8 @@ CI runs the same checks on push/PR (see `.github/workflows/ci.yml`).
 
 Repository: [github.com/BackSoftwareJR/club-backclub](https://github.com/BackSoftwareJR/club-backclub)
 
+**Guida completa (setup + aggiornamenti):** [**DEPLOY.md**](DEPLOY.md)
+
 ### Deploy rapido (locale → Hostinger)
 
 ```bash
@@ -92,6 +94,7 @@ Lo script esegue test, build frontend, push su GitHub e stampa i comandi SSH/rsy
 
 | Doc | Purpose |
 |-----|---------|
+| [**DEPLOY.md**](DEPLOY.md) | **Guida deploy schematica** (setup iniziale + aggiornamenti + migrazioni) |
 | [docs/HOSTINGER_STRUCTURE.md](docs/HOSTINGER_STRUCTURE.md) | **Struttura cartelle Hostinger** (diagrammi, .env, symlink) |
 | [docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md) | Guida operativa Hostinger |
 | [docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md) | Checklist deploy giorno del go-live |
