@@ -26,4 +26,22 @@ require $laravelRoot.'/vendor/autoload.php';
 /** @var Application $app */
 $app = require_once $laravelRoot.'/bootstrap/app.php';
 
-$app->handleRequest(Request::capture());
+$request = Request::capture();
+
+// External URL is /api/* but Laravel routes have no prefix in production.
+$uri = $request->getRequestUri();
+if (str_starts_with($uri, '/api/')) {
+    $request = Request::create(
+        substr($uri, 4),
+        $request->getMethod(),
+        $request->request->all(),
+        $request->cookies->all(),
+        $request->files->all(),
+        $request->server->all(),
+        $request->getContent(),
+    );
+} elseif ($uri === '/api' || $uri === '/api/') {
+    $request = Request::create('/', $request->getMethod(), $request->request->all(), $request->cookies->all(), $request->files->all(), $request->server->all(), $request->getContent());
+}
+
+$app->handleRequest($request);

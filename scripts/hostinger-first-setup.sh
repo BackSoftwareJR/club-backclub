@@ -55,9 +55,11 @@ else
   echo "    Clona il repo o rsync backend/ manualmente in $LARAVEL_PATH"
 fi
 
-echo "==> Composer install (production)..."
+echo "==> Composer install (production, PHP 8.4)..."
 cd "$LARAVEL_PATH"
-composer install --no-dev --optimize-autoloader
+PHP_BIN="${PHP_BIN:-/opt/alt/php84/usr/bin/php}"
+COMPOSER_BIN="${COMPOSER_BIN:-$(command -v composer)}"
+"$PHP_BIN" "$COMPOSER_BIN" install --no-dev --optimize-autoloader
 
 if [[ ! -f .env ]]; then
   echo "==> Creazione .env da template..."
