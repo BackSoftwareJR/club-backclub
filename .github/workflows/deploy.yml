@@ -1,0 +1,190 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: 'Run php artisan migrate --force on server (SSH deploy only)'
+        required: false
+        default: true
+        type: boolean
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/deploy.yml'
+      - 'scripts/**'
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PHP_VERSION: '8.3'
+  NODE_VERSION: '20'
+
+jobs:
+  test-and-build:
+    name: Test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: sqlite, pdo_sqlite
+          coverage: none
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare backend environment
+        working-directory: backend
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run backend tests
+        working-directory: backend
+        run: php artisan test
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Prepare frontend production env
+        working-directory: frontend
+        run: cp .env.production.example .env.production
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Prepare backend deployment bundle
+        run: |
+          mkdir -p deploy-bundle/backend
+          rsync -a backend/ deploy-bundle/backend/ \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude 'node_modules' \
+            --exclude 'tests' \
+            --exclude 'storage/logs/*' \
+            --exclude 'storage/framework/cache/data/*' \
+            --exclude 'storage/framework/sessions/*' \
+            --exclude 'storage/framework/views/*' \
+            --exclude '.phpunit.result.cache' \
+            --exclude 'vendor'
+          # vendor is installed on server via composer
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 7
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-bundle
+          path: deploy-bundle/backend/
+          retention-days: 7
+
+  deploy-ssh:
+    name: Deploy to Hostinger (SSH)
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    # Abilitato solo quando i secret SSH sono configurati nel repository
+    if: >-
+      ${{
+        secrets.HOSTINGER_SSH_HOST != '' &&
+        secrets.HOSTINGER_SSH_USER != '' &&
+        secrets.HOSTINGER_SSH_KEY != '' &&
+        secrets.HOSTINGER_BACKEND_PATH != '' &&
+        secrets.HOSTINGER_FRONTEND_PATH != ''
+      }}
+    steps:
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-bundle
+          path: deploy-bundle/backend/
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.HOSTINGER_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy backend via rsync
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          BACKEND_PATH: ${{ secrets.HOSTINGER_BACKEND_PATH }}
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            --exclude '.env' \
+            --exclude 'storage/logs/' \
+            --exclude 'storage/framework/cache/data/' \
+            --exclude 'storage/framework/sessions/' \
+            --exclude 'storage/framework/views/' \
+            deploy-bundle/backend/ \
+            "${SSH_USER}@${SSH_HOST}:${BACKEND_PATH}/"
+
+      - name: Post-deploy backend commands
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          BACKEND_PATH: ${{ secrets.HOSTINGER_BACKEND_PATH }}
+          RUN_MIGRATIONS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_migrations || 'true' }}
+        run: |
+          MIGRATE_CMD=""
+          if [ "$RUN_MIGRATIONS" = "true" ]; then
+            MIGRATE_CMD="php artisan migrate --force &&"
+          fi
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            "${SSH_USER}@${SSH_HOST}" \
+            "cd ${BACKEND_PATH} && composer install --no-dev --optimize-autoloader && ${MIGRATE_CMD} php artisan config:cache && php artisan route:cache"
+
+      - name: Deploy frontend via rsync
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          FRONTEND_PATH: ${{ secrets.HOSTINGER_FRONTEND_PATH }}
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            frontend/dist/ \
+            "${SSH_USER}@${SSH_HOST}:${FRONTEND_PATH}/"
+
+      - name: Sync API public directory (optional)
+        if: ${{ secrets.HOSTINGER_API_PUBLIC_PATH != '' }}
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          BACKEND_PATH: ${{ secrets.HOSTINGER_BACKEND_PATH }}
+          API_PUBLIC_PATH: ${{ secrets.HOSTINGER_API_PUBLIC_PATH }}
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            deploy-bundle/backend/public/ \
+            "${SSH_USER}@${SSH_HOST}:${API_PUBLIC_PATH}/"

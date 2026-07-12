@@ -74,16 +74,42 @@ cd backend && php artisan test
 cd frontend && npm run build
 ```
 
-CI runs the same checks on push (see `.github/workflows/ci.yml`).
+CI runs the same checks on push/PR (see `.github/workflows/ci.yml`).
 
 ## Deployment
 
+Repository: [github.com/BackSoftwareJR/club-backclub](https://github.com/BackSoftwareJR/club-backclub)
+
+### Deploy rapido (locale → Hostinger)
+
+```bash
+cp scripts/deploy.config.example scripts/deploy.config   # una tantum: SSH user/host/path
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
+```
+
+Lo script esegue test, build frontend, push su GitHub e stampa i comandi SSH/rsync da copiare.
+
 | Doc | Purpose |
 |-----|---------|
-| [docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md) | Full Hostinger guide for club.backclub.it |
-| [docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md) | Ordered deploy-day checklist |
+| [docs/HOSTINGER_STRUCTURE.md](docs/HOSTINGER_STRUCTURE.md) | **Struttura cartelle Hostinger** (diagrammi, .env, symlink) |
+| [docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md) | Guida operativa Hostinger |
+| [docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md) | Checklist deploy giorno del go-live |
 | [docs/hostinger/README.md](docs/hostinger/README.md) | Apache `.htaccess` file placement |
 | [docs/CANOPYWAVE_SETUP.md](docs/CANOPYWAVE_SETUP.md) | AI (Canopywave) production keys |
+
+### GitHub Actions
+
+| Workflow | Trigger | Cosa fa |
+|----------|---------|---------|
+| [`ci.yml`](.github/workflows/ci.yml) | push/PR su `main` | Test backend + build frontend (fail fast) |
+| [`deploy.yml`](.github/workflows/deploy.yml) | push su `main` (path filter) o manuale | Test, build, artifact; deploy SSH se secret configurati |
+
+**Secret per auto-deploy SSH** (Settings → Secrets → Actions):
+
+`HOSTINGER_SSH_HOST`, `HOSTINGER_SSH_USER`, `HOSTINGER_SSH_KEY`, `HOSTINGER_BACKEND_PATH`, `HOSTINGER_FRONTEND_PATH`, `HOSTINGER_API_PUBLIC_PATH` (opzionale)
+
+`frontend/dist/` non va committato — viene buildato in CI o localmente e caricato via rsync.
 
 ### Production environment templates
 
@@ -101,29 +127,19 @@ CI runs the same checks on push (see `.github/workflows/ci.yml`).
 
 ## Publish to GitHub
 
-This repository is not yet initialized as a git repo. Run these commands from the project root:
+Remote: `https://github.com/BackSoftwareJR/club-backclub`
 
 ```bash
-cd /path/to/club-crm
-
-# 1. Initialize git (skip if already a repo)
-git init
-
-# 2. Verify secrets are NOT staged
-git status
-# backend/.env, frontend/.env, vendor/, node_modules/, dist/ must NOT appear
-
-# 3. Stage and commit
-git add .
-git commit -m "Initial commit: Club CRM"
-
-# 4. Create repo on GitHub (browser or gh CLI), then:
-git branch -M main
-git remote add origin https://github.com/YOUR_USER/club-crm.git
-git push -u origin main
+git remote -v   # verifica origin
+git push origin main
 ```
 
-Replace `YOUR_USER` with your GitHub username or organization.
+Prima del push, verifica che segreti e build non siano tracciati:
+
+```bash
+git status
+# backend/.env, frontend/.env, scripts/deploy.config, vendor/, node_modules/, dist/ must NOT appear
+```
 
 ### Secret scan before first commit
 

@@ -219,6 +219,9 @@ Full checklist: [DEPLOY_CHECKLIST.md](DEPLOY_CHECKLIST.md)
 
 ## Related docs
 
+- [HOSTINGER_STRUCTURE.md](HOSTINGER_STRUCTURE.md) — struttura cartelle, diagrammi, symlink vs document root
 - [DEPLOY_CHECKLIST.md](DEPLOY_CHECKLIST.md) — ordered deploy-day checklist
+- [`scripts/deploy.sh`](../scripts/deploy.sh) — deploy locale con comandi SSH
+- [`scripts/hostinger-first-setup.sh`](../scripts/hostinger-first-setup.sh) — setup iniziale server
 - [hostinger/README.md](hostinger/README.md) — Apache `.htaccess` placement
 - [CANOPYWAVE_SETUP.md](CANOPYWAVE_SETUP.md) — AI integration keys

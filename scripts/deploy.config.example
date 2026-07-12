@@ -1,0 +1,12 @@
+# Copia questo file in scripts/deploy.config (non committato) e compila i valori.
+# cp scripts/deploy.config.example scripts/deploy.config
+
+HOSTINGER_SSH_USER=u123456789
+HOSTINGER_SSH_HOST=ssh.hostinger.com
+# Path assoluto alla root Laravel (dove si trova artisan)
+HOSTINGER_BACKEND_PATH=/home/u123456789/club-crm/backend
+# Path al clone Git del monorepo (per git pull); default = parent di BACKEND_PATH se vuoto
+HOSTINGER_REPO_PATH=/home/u123456789/club-crm
+HOSTINGER_FRONTEND_PATH=/home/u123456789/domains/club.backclub.it/public_html
+# Opzionale: solo se usi copia/rsync di public/ invece del document root diretto
+HOSTINGER_API_PUBLIC_PATH=/home/u123456789/domains/api.club.backclub.it/public_html

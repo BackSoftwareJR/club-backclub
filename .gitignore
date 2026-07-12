@@ -12,8 +12,11 @@ frontend/.env
 frontend/.env.local
 frontend/.env.production
 
-# Build output
+# Build output (build on deploy — rsync from local/CI, non committare)
 frontend/dist/
+
+# Deploy config locale (contiene path SSH personali)
+scripts/deploy.config
 
 # Laravel
 backend/storage/*.key
