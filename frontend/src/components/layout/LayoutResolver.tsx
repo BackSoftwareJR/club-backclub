@@ -1,6 +1,8 @@
 import type { ComponentType, ReactNode } from 'react'
 import { useTheme } from '@/hooks/useAuth'
 import { SommelierChat } from '@/components/ai/SommelierChat'
+import { ClubTabBar } from '@/components/layout/ClubTabBar'
+import { LegalFooter } from '@/components/legal/LegalFooter'
 import { PageTransition } from '@/components/layout/PageTransition'
 import { Template1 } from '@/components/layout/templates/Template1'
 import { Template2 } from '@/components/layout/templates/Template2'
@@ -26,9 +28,13 @@ export function LayoutResolver({ clubId, clubName, children }: LayoutResolverPro
   const Template = templates[templateId] ?? Template3
 
   return (
-    <Template clubId={clubId} clubName={clubName}>
-      <PageTransition>{children}</PageTransition>
-      <SommelierChat />
-    </Template>
+    <div className="mobile-app-shell md:pb-0">
+      <Template clubId={clubId} clubName={clubName}>
+        <PageTransition>{children}</PageTransition>
+        <SommelierChat />
+      </Template>
+      <ClubTabBar clubId={clubId} />
+      <LegalFooter />
+    </div>
   )
 }

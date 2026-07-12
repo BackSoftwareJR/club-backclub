@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { GlassPanel } from '@/components/ui/GlassPanel'
+import { AmountChipRow, GlassFieldLabel, GlassInput } from '@/components/ui/GlassField'
 import { api } from '@/lib/api'
 import { useToast } from '@/providers/ToastProvider'
 import { useClubId } from '@/hooks/useAuth'
@@ -55,37 +56,33 @@ export function TopupRequestForm({ onSuccess }: TopupRequestFormProps) {
     }
   }
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' && !loading) {
-      void submit()
-    }
-  }
-
   return (
-    <GlassPanel>
-      <h3 className="mb-4 text-lg font-medium">Request Top-up</h3>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
-        <div className="flex-1">
-          <input
-            aria-invalid={fieldError !== null}
-            className="glass-panel h-11 w-full rounded-xl border-white/10 bg-black/30 px-4 text-white outline-none focus:ring-2 focus:ring-primary/40"
-            disabled={loading}
-            inputMode="decimal"
-            onChange={(e) => {
-              setAmount(e.target.value)
-              if (fieldError) setFieldError(null)
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="Amount (e.g. 50.00)"
-            type="text"
-            value={amount}
-          />
-          {fieldError ? <p className="mt-1.5 text-sm text-red-400">{fieldError}</p> : null}
-        </div>
-        <Button className="sm:mt-0" disabled={loading || !amount.trim()} onClick={() => void submit()}>
-          {loading ? 'Sending…' : 'Submit'}
-        </Button>
+    <GlassPanel className="space-y-4">
+      <div>
+        <h3 className="text-lg font-medium">Request top-up</h3>
+        <p className="mt-1 text-sm text-white/50">Ask the club admin to credit your wallet.</p>
       </div>
+      <AmountChipRow amounts={[20, 50, 100, 200]} onPick={setAmount} />
+      <div>
+        <GlassFieldLabel htmlFor="topup-amount">Amount (EUR)</GlassFieldLabel>
+        <GlassInput
+          aria-invalid={fieldError !== null}
+          disabled={loading}
+          id="topup-amount"
+          inputMode="decimal"
+          onChange={(event) => {
+            setAmount(event.target.value)
+            if (fieldError) setFieldError(null)
+          }}
+          placeholder="50.00"
+          type="text"
+          value={amount}
+        />
+        {fieldError ? <p className="mt-1.5 text-sm text-red-400">{fieldError}</p> : null}
+      </div>
+      <Button className="w-full" disabled={loading || !amount.trim()} onClick={() => void submit()}>
+        {loading ? 'Sending…' : 'Submit request'}
+      </Button>
     </GlassPanel>
   )
 }

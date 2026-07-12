@@ -98,7 +98,7 @@ export function TopNav({ clubId }: { clubId: number }) {
   const links = getNavLinks(isAdmin)
 
   return (
-    <nav className="flex flex-wrap items-center justify-between gap-4">
+    <nav className="hidden flex-wrap items-center justify-between gap-4 md:flex">
       <div className="flex flex-wrap gap-2">
         {links.map((link) => (
           <Link

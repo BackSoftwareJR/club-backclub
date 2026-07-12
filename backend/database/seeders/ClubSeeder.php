@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Club;
 use App\Models\ClubMember;
+use App\Models\LegalAcceptance;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\UserWallet;
@@ -109,6 +110,22 @@ class ClubSeeder extends Seeder
                 'unit_label' => 'request',
             ],
             'is_active' => true,
+        ]);
+
+        $termsVersion = (string) config('legal.version');
+
+        LegalAcceptance::query()->create([
+            'user_id' => $owner->id,
+            'club_id' => $club->id,
+            'terms_version' => $termsVersion,
+            'accepted_at' => now(),
+        ]);
+
+        LegalAcceptance::query()->create([
+            'user_id' => $member->id,
+            'club_id' => $club->id,
+            'terms_version' => $termsVersion,
+            'accepted_at' => now(),
         ]);
     }
 }

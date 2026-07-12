@@ -7,10 +7,13 @@ use App\Exceptions\UnauthorizedApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\PinSetupRequest;
+use App\Models\ActivityLog;
 use App\Models\ClubMember;
 use App\Services\Auth\IpAuthBlockService;
 use App\Services\Auth\JwtService;
 use App\Services\Auth\PinLockoutService;
+use App\Services\Compliance\ActivityLogService;
+use App\Services\Compliance\LegalTermsService;
 use App\Services\Treasury\MemberService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,6 +26,8 @@ class AuthController extends Controller
         private readonly PinLockoutService $pinLockoutService,
         private readonly IpAuthBlockService $ipAuthBlockService,
         private readonly MemberService $memberService,
+        private readonly LegalTermsService $legalTermsService,
+        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function entry(Request $request, int $clubId, string $nfcUid): JsonResponse
@@ -31,14 +36,36 @@ class AuthController extends Controller
             $member = $this->resolveMember($clubId, $nfcUid);
         } catch (UnauthorizedApiException) {
             $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
+            $this->activityLogService->record(
+                eventType: 'entry_scan',
+                status: ActivityLog::STATUS_FAILURE,
+                clubId: $clubId,
+                nfcUid: $nfcUid,
+                request: $request,
+                metadata: ['reason' => 'unknown_card'],
+            );
             throw new UnauthorizedApiException('Card not recognized for this club.');
         }
 
         if ($member->isSuspended()) {
+            $this->activityLogService->record(
+                eventType: 'entry_scan',
+                status: ActivityLog::STATUS_BLOCKED,
+                member: $member,
+                request: $request,
+                metadata: ['reason' => 'suspended'],
+            );
             throw new ForbiddenApiException('Club membership is suspended. Contact your administrator.');
         }
 
         $this->pinLockoutService->assertNotLocked($member);
+
+        $this->activityLogService->record(
+            eventType: 'entry_scan',
+            member: $member,
+            request: $request,
+            metadata: ['requires_pin_setup' => $member->requiresPinSetup()],
+        );
 
         $club = $member->club;
 
@@ -46,36 +73,14 @@ class AuthController extends Controller
             'club_id' => $club->id,
             'nfc_uid' => $member->nfc_uid,
             'requires_pin_setup' => $member->requiresPinSetup(),
+            'requires_terms_acceptance' => $this->legalTermsService->requiresAcceptance($member),
+            'terms_version' => $this->legalTermsService->currentVersion(),
             'club_name' => $club->name,
             'theme_config' => $club->resolvedThemeConfig(),
         ]);
     }
 
     public function pinSetup(PinSetupRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
-        $member = $this->resolveMember((int) $validated['club_id'], $validated['nfc_uid']);
-
-        if ($member->isSuspended()) {
-            $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
-            throw new ForbiddenApiException('Club membership is suspended. Contact your administrator.');
-        }
-
-        if (! $member->requiresPinSetup()) {
-            $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
-            throw new ForbiddenApiException('PIN is already configured for this card.');
-        }
-
-        $this->pinLockoutService->assertNotLocked($member);
-
-        $member = $this->memberService->setupPin($member, $validated['pin']);
-        $this->ipAuthBlockService->clearFailures($request->ip() ?? '0.0.0.0');
-        $this->pinLockoutService->resetAttempts($member);
-
-        return response()->json($this->buildAuthResponse($member));
-    }
-
-    public function login(LoginRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
@@ -91,11 +96,63 @@ class AuthController extends Controller
             throw new ForbiddenApiException('Club membership is suspended. Contact your administrator.');
         }
 
+        if (! $member->requiresPinSetup()) {
+            $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
+            throw new ForbiddenApiException('PIN is already configured for this card.');
+        }
+
+        $this->assertTermsAccepted($member, $request);
+        $this->pinLockoutService->assertNotLocked($member);
+
+        $member = $this->memberService->setupPin($member, $validated['pin']);
+        $this->ipAuthBlockService->clearFailures($request->ip() ?? '0.0.0.0');
+        $this->pinLockoutService->resetAttempts($member);
+
+        $this->activityLogService->record(
+            eventType: 'pin_setup',
+            member: $member,
+            request: $request,
+        );
+
+        return response()->json($this->buildAuthResponse($member));
+    }
+
+    public function login(LoginRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        try {
+            $member = $this->resolveMember((int) $validated['club_id'], $validated['nfc_uid']);
+        } catch (UnauthorizedApiException) {
+            $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
+            $this->activityLogService->record(
+                eventType: 'login_attempt',
+                status: ActivityLog::STATUS_FAILURE,
+                clubId: (int) $validated['club_id'],
+                nfcUid: $validated['nfc_uid'],
+                request: $request,
+                metadata: ['reason' => 'unknown_card'],
+            );
+            throw new UnauthorizedApiException('Invalid credentials.');
+        }
+
+        if ($member->isSuspended()) {
+            $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
+            $this->activityLogService->record(
+                eventType: 'login_attempt',
+                status: ActivityLog::STATUS_BLOCKED,
+                member: $member,
+                request: $request,
+            );
+            throw new ForbiddenApiException('Club membership is suspended. Contact your administrator.');
+        }
+
         if ($member->requiresPinSetup()) {
             $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
             throw new ForbiddenApiException('PIN setup is required before login.');
         }
 
+        $this->assertTermsAccepted($member, $request);
         $this->pinLockoutService->assertNotLocked($member);
 
         if (! Hash::check($validated['pin'], (string) $member->pin_hash)) {
@@ -103,15 +160,35 @@ class AuthController extends Controller
                 $this->pinLockoutService->recordFailedAttempt($member);
             } catch (\App\Exceptions\PinLockedException $exception) {
                 $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
+                $this->activityLogService->record(
+                    eventType: 'login_attempt',
+                    status: ActivityLog::STATUS_BLOCKED,
+                    member: $member,
+                    request: $request,
+                    metadata: ['reason' => 'pin_locked'],
+                );
                 throw $exception;
             }
 
             $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
+            $this->activityLogService->record(
+                eventType: 'login_attempt',
+                status: ActivityLog::STATUS_FAILURE,
+                member: $member,
+                request: $request,
+                metadata: ['reason' => 'invalid_pin'],
+            );
             throw new UnauthorizedApiException('Invalid credentials.');
         }
 
         $this->pinLockoutService->resetAttempts($member);
         $this->ipAuthBlockService->clearFailures($request->ip() ?? '0.0.0.0');
+
+        $this->activityLogService->record(
+            eventType: 'login_success',
+            member: $member,
+            request: $request,
+        );
 
         return response()->json($this->buildAuthResponse($member));
     }
@@ -139,6 +216,19 @@ class AuthController extends Controller
             ],
             'is_club_owner' => $user->ownsClub($club),
         ];
+    }
+
+    private function assertTermsAccepted(ClubMember $member, Request $request): void
+    {
+        if ($this->legalTermsService->requiresAcceptance($member)) {
+            $this->activityLogService->record(
+                eventType: 'terms_required',
+                status: ActivityLog::STATUS_BLOCKED,
+                member: $member,
+                request: $request,
+            );
+            throw new ForbiddenApiException('Terms acceptance is required before continuing.');
+        }
     }
 
     private function resolveMember(int $clubId, string $nfcUid): ClubMember

@@ -10,11 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LockedRouteImport } from './routes/locked'
+import { Route as LegalRouteImport } from './routes/legal'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EntryClubIdNfcUidRouteImport } from './routes/entry.$clubId.$nfcUid'
 import { Route as ClubClubIdAuthenticatedRouteImport } from './routes/club.$clubId/_authenticated'
 import { Route as ClubClubIdAuthenticatedIndexRouteImport } from './routes/club.$clubId/_authenticated/index'
 import { Route as ClubClubIdAuthenticatedWalletRouteImport } from './routes/club.$clubId/_authenticated/wallet'
+import { Route as ClubClubIdAuthenticatedSettingsRouteImport } from './routes/club.$clubId/_authenticated/settings'
 import { Route as ClubClubIdAuthenticatedAdminIndexRouteImport } from './routes/club.$clubId/_authenticated/admin/index'
 import { Route as ClubClubIdAuthenticatedPurchaseProductIdRouteImport } from './routes/club.$clubId/_authenticated/purchase.$productId'
 import { Route as ClubClubIdAuthenticatedAdminTopupsRouteImport } from './routes/club.$clubId/_authenticated/admin/topups'
@@ -26,6 +28,11 @@ import { Route as ClubClubIdAuthenticatedAdminAnalyticsRouteImport } from './rou
 const LockedRoute = LockedRouteImport.update({
   id: '/locked',
   path: '/locked',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalRoute = LegalRouteImport.update({
+  id: '/legal',
+  path: '/legal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +60,12 @@ const ClubClubIdAuthenticatedWalletRoute =
   ClubClubIdAuthenticatedWalletRouteImport.update({
     id: '/wallet',
     path: '/wallet',
+    getParentRoute: () => ClubClubIdAuthenticatedRoute,
+  } as any)
+const ClubClubIdAuthenticatedSettingsRoute =
+  ClubClubIdAuthenticatedSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
     getParentRoute: () => ClubClubIdAuthenticatedRoute,
   } as any)
 const ClubClubIdAuthenticatedAdminIndexRoute =
@@ -100,9 +113,11 @@ const ClubClubIdAuthenticatedAdminAnalyticsRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/legal': typeof LegalRoute
   '/locked': typeof LockedRoute
   '/club/$clubId': typeof ClubClubIdAuthenticatedRouteWithChildren
   '/entry/$clubId/$nfcUid': typeof EntryClubIdNfcUidRoute
+  '/club/$clubId/settings': typeof ClubClubIdAuthenticatedSettingsRoute
   '/club/$clubId/wallet': typeof ClubClubIdAuthenticatedWalletRoute
   '/club/$clubId/': typeof ClubClubIdAuthenticatedIndexRoute
   '/club/$clubId/admin/analytics': typeof ClubClubIdAuthenticatedAdminAnalyticsRoute
@@ -115,8 +130,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/legal': typeof LegalRoute
   '/locked': typeof LockedRoute
   '/entry/$clubId/$nfcUid': typeof EntryClubIdNfcUidRoute
+  '/club/$clubId/settings': typeof ClubClubIdAuthenticatedSettingsRoute
   '/club/$clubId/wallet': typeof ClubClubIdAuthenticatedWalletRoute
   '/club/$clubId': typeof ClubClubIdAuthenticatedIndexRoute
   '/club/$clubId/admin/analytics': typeof ClubClubIdAuthenticatedAdminAnalyticsRoute
@@ -130,9 +147,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/legal': typeof LegalRoute
   '/locked': typeof LockedRoute
   '/club/$clubId/_authenticated': typeof ClubClubIdAuthenticatedRouteWithChildren
   '/entry/$clubId/$nfcUid': typeof EntryClubIdNfcUidRoute
+  '/club/$clubId/_authenticated/settings': typeof ClubClubIdAuthenticatedSettingsRoute
   '/club/$clubId/_authenticated/wallet': typeof ClubClubIdAuthenticatedWalletRoute
   '/club/$clubId/_authenticated/': typeof ClubClubIdAuthenticatedIndexRoute
   '/club/$clubId/_authenticated/admin/analytics': typeof ClubClubIdAuthenticatedAdminAnalyticsRoute
@@ -147,9 +166,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/legal'
     | '/locked'
     | '/club/$clubId'
     | '/entry/$clubId/$nfcUid'
+    | '/club/$clubId/settings'
     | '/club/$clubId/wallet'
     | '/club/$clubId/'
     | '/club/$clubId/admin/analytics'
@@ -162,8 +183,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/legal'
     | '/locked'
     | '/entry/$clubId/$nfcUid'
+    | '/club/$clubId/settings'
     | '/club/$clubId/wallet'
     | '/club/$clubId'
     | '/club/$clubId/admin/analytics'
@@ -176,9 +199,11 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/legal'
     | '/locked'
     | '/club/$clubId/_authenticated'
     | '/entry/$clubId/$nfcUid'
+    | '/club/$clubId/_authenticated/settings'
     | '/club/$clubId/_authenticated/wallet'
     | '/club/$clubId/_authenticated/'
     | '/club/$clubId/_authenticated/admin/analytics'
@@ -192,6 +217,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LegalRoute: typeof LegalRoute
   LockedRoute: typeof LockedRoute
   ClubClubIdAuthenticatedRoute: typeof ClubClubIdAuthenticatedRouteWithChildren
   EntryClubIdNfcUidRoute: typeof EntryClubIdNfcUidRoute
@@ -204,6 +230,13 @@ declare module '@tanstack/react-router' {
       path: '/locked'
       fullPath: '/locked'
       preLoaderRoute: typeof LockedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal': {
+      id: '/legal'
+      path: '/legal'
+      fullPath: '/legal'
+      preLoaderRoute: typeof LegalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -239,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/wallet'
       fullPath: '/club/$clubId/wallet'
       preLoaderRoute: typeof ClubClubIdAuthenticatedWalletRouteImport
+      parentRoute: typeof ClubClubIdAuthenticatedRoute
+    }
+    '/club/$clubId/_authenticated/settings': {
+      id: '/club/$clubId/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/club/$clubId/settings'
+      preLoaderRoute: typeof ClubClubIdAuthenticatedSettingsRouteImport
       parentRoute: typeof ClubClubIdAuthenticatedRoute
     }
     '/club/$clubId/_authenticated/admin/': {
@@ -294,6 +334,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface ClubClubIdAuthenticatedRouteChildren {
+  ClubClubIdAuthenticatedSettingsRoute: typeof ClubClubIdAuthenticatedSettingsRoute
   ClubClubIdAuthenticatedWalletRoute: typeof ClubClubIdAuthenticatedWalletRoute
   ClubClubIdAuthenticatedIndexRoute: typeof ClubClubIdAuthenticatedIndexRoute
   ClubClubIdAuthenticatedAdminAnalyticsRoute: typeof ClubClubIdAuthenticatedAdminAnalyticsRoute
@@ -307,6 +348,7 @@ interface ClubClubIdAuthenticatedRouteChildren {
 
 const ClubClubIdAuthenticatedRouteChildren: ClubClubIdAuthenticatedRouteChildren =
   {
+    ClubClubIdAuthenticatedSettingsRoute: ClubClubIdAuthenticatedSettingsRoute,
     ClubClubIdAuthenticatedWalletRoute: ClubClubIdAuthenticatedWalletRoute,
     ClubClubIdAuthenticatedIndexRoute: ClubClubIdAuthenticatedIndexRoute,
     ClubClubIdAuthenticatedAdminAnalyticsRoute:
@@ -332,6 +374,7 @@ const ClubClubIdAuthenticatedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LegalRoute: LegalRoute,
   LockedRoute: LockedRoute,
   ClubClubIdAuthenticatedRoute: ClubClubIdAuthenticatedRouteWithChildren,
   EntryClubIdNfcUidRoute: EntryClubIdNfcUidRoute,

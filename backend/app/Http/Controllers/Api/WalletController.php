@@ -8,6 +8,7 @@ use App\Http\Requests\Wallet\CreateTopupRequest;
 use App\Http\Resources\TopupRequestResource;
 use App\Models\TopupRequest;
 use App\Models\UserWallet;
+use App\Services\Compliance\ActivityLogService;
 use App\Services\Treasury\TopupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class WalletController extends Controller
 
     public function __construct(
         private readonly TopupService $topupService,
+        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function show(Request $request, int $clubId): JsonResponse
@@ -42,6 +44,20 @@ class WalletController extends Controller
             $clubId,
             $amount,
         );
+
+        $member = \App\Models\ClubMember::query()
+            ->where('club_id', $clubId)
+            ->where('user_id', $this->authUser($request)->id)
+            ->first();
+
+        if ($member !== null) {
+            $this->activityLogService->record(
+                eventType: 'topup_request',
+                member: $member,
+                request: $request,
+                metadata: ['amount' => $amount, 'topup_request_id' => $topupRequest->id],
+            );
+        }
 
         return response()->json(new TopupRequestResource($topupRequest), 201);
     }

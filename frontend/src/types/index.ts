@@ -47,6 +47,8 @@ export interface EntryResponse {
   club_id: number
   nfc_uid: string
   requires_pin_setup: boolean
+  requires_terms_acceptance: boolean
+  terms_version: string
   club_name: string
   theme_config: ThemeConfig
 }
@@ -217,4 +219,52 @@ export interface PaginatedResponse<T> {
 export interface ApiError {
   message: string
   errors?: Record<string, string[]>
+}
+
+export interface UserClubSummary {
+  id: number
+  name: string
+  is_owner: boolean
+  is_current: boolean
+  member_status: 'active' | 'suspended'
+  nfc_uid: string | null
+  requires_pin_setup: boolean
+  theme_config: ThemeConfig
+}
+
+export interface MyClubsResponse {
+  current_club_id: number
+  clubs: UserClubSummary[]
+}
+
+export interface CreateClubResponse {
+  club: AuthClub
+  nfc_uid: string
+  requires_pin_setup: boolean
+  entry_path: string
+}
+
+export interface LegalTermsSection {
+  heading: string
+  body: string
+}
+
+export interface LegalTermsDocument {
+  version: string
+  effective_date: string
+  title: string
+  summary: string
+  sections: LegalTermsSection[]
+}
+
+export interface ActivityLogEntry {
+  id: number
+  event_type: string
+  status: string
+  nfc_uid: string | null
+  user_id: number | null
+  club_member_id: number | null
+  ip_address: string | null
+  metadata: Record<string, unknown> | null
+  occurred_at: string | null
 }

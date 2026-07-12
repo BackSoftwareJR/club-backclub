@@ -4,6 +4,7 @@ import {
   LayoutGrid,
   Paintbrush2,
   Package,
+  Settings,
   Users,
   Wallet,
   type LucideIcon,
@@ -13,6 +14,7 @@ import type { NavLinkItem } from '@/components/layout/navLinks'
 const iconMap: Record<NavLinkItem['icon'], LucideIcon> = {
   catalog: LayoutGrid,
   wallet: Wallet,
+  settings: Settings,
   treasury: CreditCard,
   analytics: ChartNoAxesCombined,
   topups: CreditCard,

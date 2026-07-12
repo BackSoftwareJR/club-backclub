@@ -71,15 +71,17 @@ function WalletPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <GlassPanel className="text-center">
-        <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">Your Balance</p>
-        <BalanceCounter value={balance} />
+      <GlassPanel className="overflow-hidden p-0">
+        <div className="bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--color-primary)_18%,transparent),transparent_55%)] px-6 py-8 text-center">
+          <p className="mb-2 text-xs uppercase tracking-[0.28em] text-white/45">Available balance</p>
+          <BalanceCounter value={balance} />
+        </div>
       </GlassPanel>
 
       <TopupRequestForm onSuccess={loadWallet} />
 
       <GlassPanel>
-        <h3 className="mb-4 text-lg">Your Top-up Requests</h3>
+        <h3 className="mb-4 text-lg">Top-up requests</h3>
         {requests.length === 0 ? (
           <p className="text-white/50">No requests yet.</p>
         ) : (

@@ -4,15 +4,25 @@ use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Admin\AdminMediaController;
 use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Compliance\LegalController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\PurchaseController;
+use App\Http\Controllers\Api\User\UserClubController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/legal/terms', [LegalController::class, 'show']);
+
 Route::middleware(['throttle:entry', 'ip.auth.block'])->group(function () {
     Route::get('/entry/{club_id}/{nfc_uid}', [AuthController::class, 'entry']);
+    Route::post('/legal/accept', [LegalController::class, 'accept']);
     Route::post('/auth/pin-setup', [AuthController::class, 'pinSetup']);
     Route::post('/auth/login', [AuthController::class, 'login']);
+});
+
+Route::middleware(['jwt.auth'])->group(function () {
+    Route::get('/me/clubs', [UserClubController::class, 'index']);
+    Route::post('/me/clubs', [UserClubController::class, 'store']);
 });
 
 Route::middleware(['jwt.auth', 'club.member.active'])->group(function () {
@@ -61,5 +71,7 @@ Route::middleware(['jwt.auth', 'club.member.active', 'club.admin'])->group(funct
         Route::delete('/identity/logo', [AdminMediaController::class, 'deleteClubLogo']);
         Route::post('/identity/hero', [AdminMediaController::class, 'uploadClubHero']);
         Route::delete('/identity/hero', [AdminMediaController::class, 'deleteClubHero']);
+
+        Route::get('/activity-logs', [LegalController::class, 'activityLogs']);
     });
 });

@@ -7,9 +7,12 @@ import type {
   AuthResponse,
   ClubAppearancePayload,
   ClubIdentity,
+  CreateClubResponse,
   EntryResponse,
   LedgerEntry,
+  LegalTermsDocument,
   Member,
+  MyClubsResponse,
   PaginatedResponse,
   Product,
   ProductPayload,
@@ -84,6 +87,22 @@ export const api = {
 
   login: (body: { club_id: number; nfc_uid: string; pin: string }) =>
     request<AuthResponse>({ method: 'POST', url: '/auth/login', data: body }),
+
+  getLegalTerms: () =>
+    request<{ data: LegalTermsDocument }>({ method: 'GET', url: '/legal/terms' }),
+
+  acceptLegalTerms: (body: { club_id: number; nfc_uid: string; terms_version: string }) =>
+    request<{ accepted: boolean; terms_version: string; accepted_at: string }>({
+      method: 'POST',
+      url: '/legal/accept',
+      data: body,
+    }),
+
+  listMyClubs: () =>
+    request<MyClubsResponse>({ method: 'GET', url: '/me/clubs' }),
+
+  createClub: (body: { name: string; terms_version: string; terms_accepted: boolean }) =>
+    request<CreateClubResponse>({ method: 'POST', url: '/me/clubs', data: body }),
 
   getWallet: (clubId: number) =>
     request<WalletResponse>({ method: 'GET', url: `/clubs/${clubId}/wallet` }),
@@ -305,5 +324,11 @@ export const api = {
     request<{ data: ClubIdentity }>({
       method: 'DELETE',
       url: `/clubs/${clubId}/admin/identity/hero`,
+    }),
+
+  listActivityLogs: (clubId: number) =>
+    request<{ data: import('@/types').ActivityLogEntry[] }>({
+      method: 'GET',
+      url: `/clubs/${clubId}/admin/activity-logs`,
     }),
 }

@@ -21,6 +21,7 @@ use App\Models\Product;
 use App\Models\TopupRequest;
 use App\Models\WalletTransaction;
 use App\Models\UserWallet;
+use App\Services\Compliance\ActivityLogService;
 use Carbon\CarbonImmutable;
 use App\Services\Treasury\MemberService;
 use App\Services\Treasury\TopupService;
@@ -36,6 +37,7 @@ class AdminController extends Controller
     public function __construct(
         private readonly TopupService $topupService,
         private readonly MemberService $memberService,
+        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function treasury(int $clubId): JsonResponse
@@ -200,6 +202,20 @@ class AdminController extends Controller
             $this->authUser($request),
         );
 
+        $member = ClubMember::query()
+            ->where('club_id', $clubId)
+            ->where('user_id', (int) $validated['user_id'])
+            ->first();
+
+        if ($member !== null) {
+            $this->activityLogService->record(
+                eventType: 'admin_injection',
+                member: $member,
+                request: $request,
+                metadata: ['amount' => $amount, 'ledger_id' => $result['ledger']->id],
+            );
+        }
+
         return response()->json([
             'user_id' => $result['wallet']->user_id,
             'new_balance' => (string) $result['wallet']->current_balance,
@@ -258,6 +274,13 @@ class AdminController extends Controller
 
         $result['member']->load('user');
         $result['member']->wallet_balance = $result['wallet']->current_balance;
+
+        $this->activityLogService->record(
+            eventType: 'member_created',
+            member: $result['member'],
+            request: $request,
+            metadata: ['email' => $validated['email'], 'nfc_uid' => $validated['nfc_uid']],
+        );
 
         return response()->json(new MemberResource($result['member']), 201);
     }

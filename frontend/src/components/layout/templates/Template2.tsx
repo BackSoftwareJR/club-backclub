@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { AdminToggle, BottomTabs } from '@/components/layout/AdminToggle'
+import { AdminToggle } from '@/components/layout/AdminToggle'
 import { animatePageEnter } from '@/lib/gsap'
 import { useTheme } from '@/hooks/useAuth'
 import type { TemplateProps } from '@/components/layout/types'
 
-export function Template2({ clubId, clubName, children }: TemplateProps) {
+export function Template2({ clubName, children }: TemplateProps) {
   const { themeConfig } = useTheme()
   const mainRef = useRef<HTMLElement>(null)
 
@@ -16,8 +16,8 @@ export function Template2({ clubId, clubName, children }: TemplateProps) {
   }, [])
 
   return (
-    <div className="relative min-h-screen pb-24">
-      <div className="sticky top-0 z-30 border-b border-white/10 bg-black/50 backdrop-blur-xl">
+    <div className="relative min-h-screen">
+      <div className="sticky top-0 z-30 border-b border-white/10 bg-black/50 backdrop-blur-xl safe-top">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <motion.div animate={{ opacity: 1, x: 0 }} initial={{ opacity: 0, x: -16 }}>
             {themeConfig?.assets?.logo_url ? (
@@ -39,8 +39,6 @@ export function Template2({ clubId, clubName, children }: TemplateProps) {
       <main ref={mainRef} className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         {children}
       </main>
-
-      <BottomTabs clubId={clubId} />
     </div>
   )
 }
