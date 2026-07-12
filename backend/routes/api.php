@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Compliance\LegalController;
 use App\Http\Controllers\Api\MediaController;
+use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Api\Security\SecurityController;
 use App\Http\Controllers\Api\User\UserClubController;
