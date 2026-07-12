@@ -1,7 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { AuthScreen } from '@/components/auth/AuthScreen'
 import { PinEntry } from '@/components/auth/PinEntry'
 import { PinSetup } from '@/components/auth/PinSetup'
+import { LuxurySpinner } from '@/components/ui/LuxurySpinner'
 import { api } from '@/lib/api'
 import { bootstrapEntryContext } from '@/providers/AuthProvider'
 import { useTheme } from '@/hooks/useAuth'
@@ -20,6 +23,9 @@ function EntryPage() {
 
   useEffect(() => {
     const load = async () => {
+      setError(null)
+      setEntry(null)
+
       try {
         const data = await api.entry(Number(clubId), nfcUid)
         setEntry(data)
@@ -35,7 +41,16 @@ function EntryPage() {
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
-        <div className="glass-panel max-w-md p-8 text-center text-red-400">{error}</div>
+        <AuthScreen screenKey="entry-error">
+          <motion.div
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-panel max-w-md p-8 text-center text-red-400"
+            initial={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.3 }}
+          >
+            {error}
+          </motion.div>
+        </AuthScreen>
       </div>
     )
   }
@@ -43,7 +58,7 @@ function EntryPage() {
   if (!entry) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <LuxurySpinner label="Recognizing card" />
       </div>
     )
   }

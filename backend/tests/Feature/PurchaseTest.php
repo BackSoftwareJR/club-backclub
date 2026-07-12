@@ -87,4 +87,31 @@ class PurchaseTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonPath('error', 'invalid_quantity');
     }
+
+    public function test_custom_text_purchase_deducts_flat_price(): void
+    {
+        $this->seedClub();
+        $token = $this->ownerToken();
+        $clubId = $this->clubId();
+
+        $product = Product::query()
+            ->where('club_id', $clubId)
+            ->where('selling_mode', 'custom_text')
+            ->firstOrFail();
+
+        $response = $this->withBearer($token)->postJson("/api/clubs/{$clubId}/purchases", [
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'custom_note' => 'Extra ice please',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('amount_deducted', '15.00')
+            ->assertJsonPath('new_balance', '85.00');
+
+        $this->assertDatabaseHas('wallet_transactions', [
+            'product_id' => $product->id,
+            'amount_deducted' => '15.00',
+        ]);
+    }
 }

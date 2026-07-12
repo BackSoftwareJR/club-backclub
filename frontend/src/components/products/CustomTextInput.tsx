@@ -6,11 +6,18 @@ interface CustomTextInputProps {
 
 export function CustomTextInput({ value, onChange, placeholder }: CustomTextInputProps) {
   return (
-    <textarea
-      className="glass-panel min-h-28 w-full resize-none rounded-xl border-white/10 bg-black/30 p-4 text-white outline-none focus:ring-2 focus:ring-primary/40"
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder ?? 'Describe your request…'}
-      value={value}
-    />
+    <div className="space-y-2">
+      <label className="text-sm text-white/60" htmlFor="custom-request">
+        Your request
+      </label>
+      <input
+        className="w-full border-0 border-b border-white/30 bg-transparent px-0 py-3 text-lg text-white outline-none transition placeholder:text-white/30 focus:border-primary"
+        id="custom-request"
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? 'Describe your request…'}
+        type="text"
+        value={value}
+      />
+    </div>
   )
 }

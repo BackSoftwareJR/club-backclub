@@ -27,10 +27,15 @@ class AuthController extends Controller
 
     public function entry(Request $request, int $clubId, string $nfcUid): JsonResponse
     {
-        $member = $this->resolveMember($clubId, $nfcUid);
+        try {
+            $member = $this->resolveMember($clubId, $nfcUid);
+        } catch (UnauthorizedApiException) {
+            $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
+            throw new UnauthorizedApiException('Card not recognized for this club.');
+        }
 
         if ($member->isSuspended()) {
-            throw new ForbiddenApiException('Club membership is suspended.');
+            throw new ForbiddenApiException('Club membership is suspended. Contact your administrator.');
         }
 
         $this->pinLockoutService->assertNotLocked($member);
@@ -53,7 +58,7 @@ class AuthController extends Controller
 
         if ($member->isSuspended()) {
             $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
-            throw new ForbiddenApiException('Club membership is suspended.');
+            throw new ForbiddenApiException('Club membership is suspended. Contact your administrator.');
         }
 
         if (! $member->requiresPinSetup()) {
@@ -83,7 +88,7 @@ class AuthController extends Controller
 
         if ($member->isSuspended()) {
             $this->ipAuthBlockService->recordFailure($request->ip() ?? '0.0.0.0');
-            throw new ForbiddenApiException('Club membership is suspended.');
+            throw new ForbiddenApiException('Club membership is suspended. Contact your administrator.');
         }
 
         if ($member->requiresPinSetup()) {

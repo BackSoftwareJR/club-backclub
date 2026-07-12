@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { ProductCard } from '@/components/products/ProductCard'
+import { CatalogSkeleton } from '@/components/ui/LuxurySkeleton'
 import { api } from '@/lib/api'
 import { useClubId } from '@/hooks/useAuth'
 import type { Product } from '@/types'
@@ -30,15 +31,20 @@ function CatalogPage() {
   }, [clubId])
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    )
+    return <CatalogSkeleton />
   }
 
   if (error) {
     return <p className="text-center text-red-400">{error}</p>
+  }
+
+  if (products.length === 0) {
+    return (
+      <div className="text-center">
+        <h2 className="mb-4 text-2xl">Products</h2>
+        <p className="text-white/50">No products available right now. Check back soon.</p>
+      </div>
+    )
   }
 
   return (

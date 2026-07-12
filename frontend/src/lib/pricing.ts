@@ -7,6 +7,12 @@ export class InvalidQuantityError extends Error {
   }
 }
 
+function isMultipleOf(value: number, step: number): boolean {
+  const remainder = value % step
+  const epsilon = 1e-9
+  return Math.abs(remainder) < epsilon || Math.abs(remainder - step) < epsilon
+}
+
 export function calculatePrice(
   priceConfig: PriceConfig,
   sellingMode: SellingMode,
@@ -26,7 +32,7 @@ export function calculatePrice(
   const pricePerStep = config.price_per_step
   const allowFractions = config.allow_fractions ?? false
 
-  if (!allowFractions && quantity % step !== 0) {
+  if (!allowFractions && !isMultipleOf(quantity, step)) {
     throw new InvalidQuantityError()
   }
 

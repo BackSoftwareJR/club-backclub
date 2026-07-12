@@ -2,12 +2,14 @@
 
 namespace App\Services\Treasury;
 
+use App\Exceptions\ForbiddenApiException;
 use App\Models\Club;
 use App\Models\ClubMember;
 use App\Models\User;
 use App\Models\UserWallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class MemberService
 {
@@ -18,6 +20,17 @@ class MemberService
     {
         return DB::transaction(function () use ($club, $email, $nfcUid) {
             $user = User::query()->firstOrCreate(['email' => $email]);
+
+            $alreadyMember = ClubMember::query()
+                ->where('club_id', $club->id)
+                ->where('user_id', $user->id)
+                ->exists();
+
+            if ($alreadyMember) {
+                throw ValidationException::withMessages([
+                    'email' => ['This user is already a member of this club.'],
+                ]);
+            }
 
             $member = ClubMember::query()->create([
                 'club_id' => $club->id,
@@ -67,12 +80,23 @@ class MemberService
 
     public function setupPin(ClubMember $member, string $pin): ClubMember
     {
-        $member->update([
-            'pin_hash' => Hash::make($pin),
-            'failed_pin_attempts' => 0,
-            'pin_locked_until' => null,
-        ]);
+        return DB::transaction(function () use ($member, $pin) {
+            $locked = ClubMember::query()
+                ->whereKey($member->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        return $member->fresh();
+            if (! $locked->requiresPinSetup()) {
+                throw new ForbiddenApiException('PIN is already configured for this card.');
+            }
+
+            $locked->update([
+                'pin_hash' => Hash::make($pin),
+                'failed_pin_attempts' => 0,
+                'pin_locked_until' => null,
+            ]);
+
+            return $locked->fresh();
+        });
     }
 }

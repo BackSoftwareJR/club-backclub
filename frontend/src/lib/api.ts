@@ -15,7 +15,18 @@ import type {
   TreasuryResponse,
   WalletResponse,
 } from '@/types'
+import { ApiRequestError, resolveApiErrorMessage } from '@/lib/apiErrors'
 import { clearSession, getToken } from '@/lib/storage'
+
+interface ApiErrorBody {
+  message?: string
+  error?: string
+}
+
+function isPublicAuthRequest(url: string | undefined): boolean {
+  if (!url) return false
+  return url.includes('/auth/') || url.includes('/entry/')
+}
 
 const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api'
 
@@ -37,13 +48,16 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string }>) => {
-    if (error.response?.status === 401) {
+  (error: AxiosError<ApiErrorBody>) => {
+    const status = error.response?.status
+    const requestUrl = error.config?.url
+
+    if (status === 401 && !isPublicAuthRequest(requestUrl) && getToken()) {
       clearSession()
     }
-    const message =
-      error.response?.data?.message ?? error.message ?? 'An unexpected error occurred'
-    return Promise.reject(new Error(message))
+
+    const message = resolveApiErrorMessage(status, error.response?.data)
+    return Promise.reject(new ApiRequestError(message, status, error.response?.data?.error))
   },
 )
 
@@ -80,6 +94,9 @@ export const api = {
 
   getProducts: (clubId: number) =>
     request<{ data: Product[] }>({ method: 'GET', url: `/clubs/${clubId}/products` }),
+
+  listAdminProducts: (clubId: number) =>
+    request<{ data: Product[] }>({ method: 'GET', url: `/clubs/${clubId}/admin/products` }),
 
   purchase: (
     clubId: number,

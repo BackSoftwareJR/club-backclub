@@ -1,12 +1,14 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { LuxurySpinner } from '@/components/ui/LuxurySpinner'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { Modal } from '@/components/ui/Modal'
+import { TopupStatusBadge } from '@/components/wallet/TopupStatusBadge'
 import { api } from '@/lib/api'
 import { useClubId } from '@/hooks/useAuth'
 import { getSession } from '@/lib/storage'
-import { formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import { useToast } from '@/providers/ToastProvider'
 import type { TopupRequest } from '@/types'
 
@@ -32,21 +34,27 @@ function AdminTopupsPage() {
   const [rejectNote, setRejectNote] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const response = await api.listAdminTopupRequests(clubId, 'pending')
     setRequests(response.data ?? [])
-  }
+  }, [clubId])
 
   useEffect(() => {
     const init = async () => {
       try {
         await load()
+      } catch (err) {
+        toast({
+          title: 'Failed to load top-up requests',
+          description: err instanceof Error ? err.message : 'Unknown error',
+          variant: 'error',
+        })
       } finally {
         setLoading(false)
       }
     }
     void init()
-  }, [clubId])
+  }, [clubId, load, toast])
 
   const approve = async (id: number) => {
     setActionLoading(true)
@@ -88,7 +96,7 @@ function AdminTopupsPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <LuxurySpinner label="Loading top-ups" />
       </div>
     )
   }
@@ -104,9 +112,10 @@ function AdminTopupsPage() {
           {requests.map((req) => (
             <GlassPanel key={req.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
               <div>
-                <p className="text-lg font-medium">€{req.amount}</p>
+                <p className="text-lg font-medium">{formatCurrency(req.amount)}</p>
                 <p className="text-sm text-white/50">{formatDate(req.created_at)}</p>
               </div>
+              <TopupStatusBadge status={req.status} />
               <div className="flex gap-2">
                 <Button disabled={actionLoading} onClick={() => void approve(req.id)}>
                   Approve

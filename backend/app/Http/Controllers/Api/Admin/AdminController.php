@@ -36,15 +36,17 @@ class AdminController extends Controller
 
     public function treasury(int $clubId): JsonResponse
     {
+        $cashFlowTotal = number_format(
+            (float) ClubLedger::query()->where('club_id', $clubId)->sum('amount'),
+            2,
+            '.',
+            '',
+        );
+
         $ledger = ClubLedger::query()
             ->where('club_id', $clubId)
             ->orderByDesc('created_at')
             ->get();
-
-        $cashFlowTotal = $ledger->reduce(
-            fn (string $carry, ClubLedger $entry) => bcadd($carry, (string) $entry->amount, 2),
-            '0.00',
-        );
 
         return response()->json([
             'cash_flow_total' => $cashFlowTotal,
@@ -185,6 +187,18 @@ class AdminController extends Controller
         $updated->load('user');
 
         return response()->json(new MemberResource($updated));
+    }
+
+    public function listProducts(int $clubId): JsonResponse
+    {
+        $products = Product::query()
+            ->where('club_id', $clubId)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'data' => ProductResource::collection($products),
+        ]);
     }
 
     public function storeProduct(StoreProductRequest $request, int $clubId): JsonResponse

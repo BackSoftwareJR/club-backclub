@@ -21,3 +21,15 @@ export function formatDate(iso: string | null): string {
     timeStyle: 'short',
   }).format(new Date(iso))
 }
+
+const POSITIVE_AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/
+
+export function parsePositiveAmount(value: string): string | null {
+  const trimmed = value.trim()
+  if (!POSITIVE_AMOUNT_PATTERN.test(trimmed)) return null
+
+  const amount = parseFloat(trimmed)
+  if (!Number.isFinite(amount) || amount <= 0) return null
+
+  return amount.toFixed(2)
+}

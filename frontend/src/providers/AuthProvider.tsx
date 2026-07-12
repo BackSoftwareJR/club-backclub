@@ -54,15 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSession()
     setSessionState(null)
     setIsLocked(false)
-    void navigate({ to: '/locked' })
+    void navigate({ to: '/' })
   }, [navigate])
 
   const handleIdle = useCallback(() => {
     if (session) {
       clearToken()
       setIsLocked(true)
+      void navigate({ to: '/locked' })
     }
-  }, [session])
+  }, [session, navigate])
 
   useIdleTimeout(handleIdle, IDLE_TIMEOUT_MS, !!session && !isLocked)
 

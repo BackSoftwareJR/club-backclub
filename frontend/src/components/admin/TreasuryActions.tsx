@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { api } from '@/lib/api'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, parsePositiveAmount } from '@/lib/utils'
 import { useToast } from '@/providers/ToastProvider'
 import type { Member } from '@/types'
 
@@ -47,11 +47,21 @@ export function TreasuryActions({ clubId, onSuccess }: TreasuryActionsProps) {
   }, [clubId])
 
   const submitExpense = async () => {
+    const amount = parsePositiveAmount(expenseAmount)
+    if (!amount) {
+      toast({ title: 'Enter a valid positive amount (e.g. 120.00)', variant: 'error' })
+      return
+    }
+    if (!expenseDescription.trim()) {
+      toast({ title: 'Description is required', variant: 'error' })
+      return
+    }
+
     setExpenseLoading(true)
     try {
       await api.recordExpense(clubId, {
-        amount: expenseAmount,
-        description: expenseDescription,
+        amount,
+        description: expenseDescription.trim(),
       })
       toast({ title: 'Expense recorded', variant: 'success' })
       setExpenseAmount('')
@@ -69,12 +79,22 @@ export function TreasuryActions({ clubId, onSuccess }: TreasuryActionsProps) {
   }
 
   const submitInjection = async () => {
+    const amount = parsePositiveAmount(injectionAmount)
+    if (!amount) {
+      toast({ title: 'Enter a valid positive amount (e.g. 30.00)', variant: 'error' })
+      return
+    }
+    if (!injectionUserId) {
+      toast({ title: 'Select a member', variant: 'error' })
+      return
+    }
+
     setInjectionLoading(true)
     try {
       const result = await api.adminInjection(clubId, {
         user_id: Number(injectionUserId),
-        amount: injectionAmount,
-        description: injectionDescription || undefined,
+        amount,
+        description: injectionDescription.trim() || undefined,
       })
       toast({
         title: 'Funds injected',
@@ -96,6 +116,8 @@ export function TreasuryActions({ clubId, onSuccess }: TreasuryActionsProps) {
   }
 
   const activeMembers = members.filter((member) => member.status === 'active')
+  const expenseAmountValid = parsePositiveAmount(expenseAmount) !== null
+  const injectionAmountValid = parsePositiveAmount(injectionAmount) !== null
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -134,7 +156,11 @@ export function TreasuryActions({ clubId, onSuccess }: TreasuryActionsProps) {
           </div>
           <Button
             className="w-full"
-            disabled={expenseLoading || !expenseAmount || !expenseDescription}
+            disabled={
+              expenseLoading ||
+              !expenseAmountValid ||
+              !expenseDescription.trim()
+            }
             onClick={() => void submitExpense()}
           >
             {expenseLoading ? 'Recording…' : 'Record Expense'}
@@ -201,7 +227,11 @@ export function TreasuryActions({ clubId, onSuccess }: TreasuryActionsProps) {
           </div>
           <Button
             className="w-full"
-            disabled={injectionLoading || !injectionUserId || !injectionAmount}
+            disabled={
+              injectionLoading ||
+              !injectionUserId ||
+              !injectionAmountValid
+            }
             onClick={() => void submitInjection()}
           >
             {injectionLoading ? 'Injecting…' : 'Inject Funds'}

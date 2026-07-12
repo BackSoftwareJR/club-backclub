@@ -1,8 +1,20 @@
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import type { LedgerEntry } from '@/types'
 
 interface LedgerTableProps {
   entries: LedgerEntry[]
+}
+
+const TYPE_LABELS: Record<LedgerEntry['transaction_type'], string> = {
+  user_topup: 'User Top-up',
+  admin_injection: 'Admin Injection',
+  admin_expense: 'Admin Expense',
+}
+
+const TYPE_BADGE_CLASS: Record<LedgerEntry['transaction_type'], string> = {
+  user_topup: 'bg-emerald-500/15 text-emerald-400',
+  admin_injection: 'bg-sky-500/15 text-sky-400',
+  admin_expense: 'bg-amber-500/15 text-amber-400',
 }
 
 export function LedgerTable({ entries }: LedgerTableProps) {
@@ -24,7 +36,16 @@ export function LedgerTable({ entries }: LedgerTableProps) {
         <tbody>
           {entries.map((entry) => (
             <tr key={entry.id} className="border-b border-white/5">
-              <td className="py-3 pr-4 capitalize">{entry.transaction_type.replace('_', ' ')}</td>
+              <td className="py-3 pr-4">
+                <span
+                  className={cn(
+                    'inline-flex rounded-full px-2 py-1 text-xs font-medium',
+                    TYPE_BADGE_CLASS[entry.transaction_type],
+                  )}
+                >
+                  {TYPE_LABELS[entry.transaction_type]}
+                </span>
+              </td>
               <td
                 className={`py-3 pr-4 font-medium ${parseFloat(entry.amount) < 0 ? 'text-red-400' : 'text-primary'}`}
               >

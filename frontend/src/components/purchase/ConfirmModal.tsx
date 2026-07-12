@@ -6,6 +6,8 @@ interface ConfirmModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   productName: string
+  quantityLabel?: string
+  customNote?: string
   total: number
   loading?: boolean
   onConfirm: () => void
@@ -15,6 +17,8 @@ export function ConfirmModal({
   open,
   onOpenChange,
   productName,
+  quantityLabel,
+  customNote,
   total,
   loading,
   onConfirm,
@@ -30,14 +34,27 @@ export function ConfirmModal({
         <div className="rounded-xl bg-white/5 p-4">
           <p className="text-sm text-white/60">Product</p>
           <p className="text-lg">{productName}</p>
-          <p className="mt-2 text-2xl font-semibold text-primary">{formatCurrency(total)}</p>
+          {quantityLabel ? (
+            <p className="mt-2 text-sm text-white/70">{quantityLabel}</p>
+          ) : null}
+          {customNote ? (
+            <p className="mt-2 rounded-lg bg-black/30 p-3 text-sm text-white/80">{customNote}</p>
+          ) : null}
+          <p className="mt-3 text-2xl font-semibold text-primary">{formatCurrency(total)}</p>
         </div>
         <div className="flex gap-3">
-          <Button className="flex-1" onClick={() => onOpenChange(false)} variant="ghost">
+          <Button className="flex-1" disabled={loading} onClick={() => onOpenChange(false)} variant="ghost">
             Cancel
           </Button>
-          <Button className="flex-1" disabled={loading} onClick={onConfirm}>
-            {loading ? 'Processing…' : 'Confirm'}
+          <Button className="relative flex-1" disabled={loading} onClick={onConfirm}>
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Processing…
+              </span>
+            ) : (
+              'Confirm'
+            )}
           </Button>
         </div>
       </div>

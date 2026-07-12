@@ -23,11 +23,13 @@ class AiContextBuilder
 
         if ($wallet !== null) {
             $transactions = WalletTransaction::query()
+                ->with('product')
                 ->where('wallet_id', $wallet->id)
                 ->orderByDesc('created_at')
                 ->limit(10)
                 ->get()
                 ->map(fn (WalletTransaction $transaction) => [
+                    'product_name' => $transaction->product?->name,
                     'amount_deducted' => (string) $transaction->amount_deducted,
                     'metadata' => $transaction->metadata,
                     'created_at' => $transaction->created_at?->toIso8601String(),

@@ -43,6 +43,7 @@ Route::middleware(['jwt.auth', 'club.member.active', 'club.admin'])->group(funct
         Route::patch('/members/{member_id}/suspend', [AdminController::class, 'suspend']);
         Route::patch('/members/{member_id}/revoke-card', [AdminController::class, 'revokeCard']);
 
+        Route::get('/products', [AdminController::class, 'listProducts']);
         Route::post('/products', [AdminController::class, 'storeProduct']);
         Route::patch('/products/{product_id}', [AdminController::class, 'updateProduct']);
         Route::delete('/products/{product_id}', [AdminController::class, 'destroyProduct']);

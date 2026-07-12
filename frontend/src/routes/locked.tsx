@@ -1,4 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { AuthScreen } from '@/components/auth/AuthScreen'
 import { PinEntry } from '@/components/auth/PinEntry'
 import { getEntryContext, getSession } from '@/lib/storage'
 import { useAuth } from '@/hooks/useAuth'
@@ -23,19 +24,21 @@ function LockedPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <PinEntry
-        clubId={session.club.id}
-        clubName={session.club.name}
-        mode="unlock"
-        nfcUid={entry?.nfcUid ?? session.nfc_uid}
-        onSuccess={() => {
-          setLocked(false)
-          void navigate({
-            to: '/club/$clubId',
-            params: { clubId: String(session.club.id) },
-          })
-        }}
-      />
+      <AuthScreen screenKey="locked">
+        <PinEntry
+          clubId={session.club.id}
+          clubName={session.club.name}
+          mode="unlock"
+          nfcUid={entry?.nfcUid ?? session.nfc_uid}
+          onSuccess={() => {
+            setLocked(false)
+            void navigate({
+              to: '/club/$clubId',
+              params: { clubId: String(session.club.id) },
+            })
+          }}
+        />
+      </AuthScreen>
     </div>
   )
 }

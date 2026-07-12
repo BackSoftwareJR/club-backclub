@@ -5,6 +5,7 @@ namespace App\Services\Auth;
 use App\Exceptions\PinLockedException;
 use App\Models\ClubMember;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class PinLockoutService
 {
@@ -23,20 +24,26 @@ class PinLockoutService
 
     public function recordFailedAttempt(ClubMember $member): void
     {
-        $member->refresh();
-        $attempts = $member->failed_pin_attempts + 1;
+        DB::transaction(function () use ($member) {
+            $locked = ClubMember::query()
+                ->whereKey($member->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $attributes = ['failed_pin_attempts' => $attempts];
+            $attempts = $locked->failed_pin_attempts + 1;
 
-        if ($attempts >= self::MAX_ATTEMPTS) {
-            $attributes['pin_locked_until'] = Carbon::now()->addMinutes(self::LOCKOUT_MINUTES);
-        }
+            $attributes = ['failed_pin_attempts' => $attempts];
 
-        $member->update($attributes);
+            if ($attempts >= self::MAX_ATTEMPTS) {
+                $attributes['pin_locked_until'] = Carbon::now()->addMinutes(self::LOCKOUT_MINUTES);
+            }
 
-        if ($attempts >= self::MAX_ATTEMPTS) {
-            throw new PinLockedException;
-        }
+            $locked->update($attributes);
+
+            if ($attempts >= self::MAX_ATTEMPTS) {
+                throw new PinLockedException;
+            }
+        });
     }
 
     public function resetAttempts(ClubMember $member): void

@@ -5,6 +5,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel'
 import { Modal } from '@/components/ui/Modal'
 import { api } from '@/lib/api'
 import { calculatePrice, defaultQuantity } from '@/lib/pricing'
+import { validateProductPayload } from '@/lib/productValidation'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useToast } from '@/providers/ToastProvider'
 import type {
@@ -81,6 +82,7 @@ export function ProductManager({ clubId }: ProductManagerProps) {
   const { toast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [form, setForm] = useState<ProductFormState>(emptyForm())
@@ -88,7 +90,7 @@ export function ProductManager({ clubId }: ProductManagerProps) {
   const [deactivatingId, setDeactivatingId] = useState<number | null>(null)
 
   const load = async () => {
-    const response = await api.getProducts(clubId)
+    const response = await api.listAdminProducts(clubId)
     setProducts(response.data)
   }
 
@@ -96,6 +98,8 @@ export function ProductManager({ clubId }: ProductManagerProps) {
     const init = async () => {
       try {
         await load()
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : 'Failed to load products')
       } finally {
         setLoading(false)
       }
@@ -150,14 +154,20 @@ export function ProductManager({ clubId }: ProductManagerProps) {
   })
 
   const save = async () => {
-    if (!form.name.trim()) {
-      toast({ title: 'Name is required', variant: 'error' })
+    const payload = buildPayload()
+    const validationErrors = validateProductPayload(payload)
+
+    if (validationErrors.name || validationErrors.price_config) {
+      toast({
+        title: 'Validation error',
+        description: validationErrors.name ?? validationErrors.price_config,
+        variant: 'error',
+      })
       return
     }
 
     setSaving(true)
     try {
-      const payload = buildPayload()
       if (editingProduct) {
         await api.updateProduct(clubId, editingProduct.id, payload)
         toast({ title: 'Product updated', variant: 'success' })
@@ -203,15 +213,21 @@ export function ProductManager({ clubId }: ProductManagerProps) {
     )
   }
 
+  if (loadError) {
+    return <p className="text-center text-red-400">{loadError}</p>
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-white/50">{products.length} active product{products.length !== 1 ? 's' : ''}</p>
+        <p className="text-sm text-white/50">
+          {products.length} product{products.length !== 1 ? 's' : ''} ({products.filter((p) => p.is_active).length} active)
+        </p>
         <Button onClick={openCreate}>Add product</Button>
       </div>
 
       {products.length === 0 ? (
-        <GlassPanel className="text-center text-white/50">No active products. Create one to get started.</GlassPanel>
+        <GlassPanel className="text-center text-white/50">No products yet. Create one to get started.</GlassPanel>
       ) : (
         <div className="grid gap-4">
           {products.map((product) => (
@@ -237,7 +253,7 @@ export function ProductManager({ clubId }: ProductManagerProps) {
                   Edit
                 </Button>
                 <Button
-                  disabled={deactivatingId === product.id}
+                  disabled={deactivatingId === product.id || !product.is_active}
                   onClick={() => void deactivate(product.id)}
                   size="sm"
                   variant="destructive"

@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Concerns\ValidatesProductPriceConfig;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
+    use ValidatesProductPriceConfig;
+
     public function authorize(): bool
     {
         return true;
@@ -18,6 +21,8 @@ class StoreProductRequest extends FormRequest
      */
     public function rules(): array
     {
+        $sellingMode = $this->input('selling_mode');
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'selling_mode' => ['required', Rule::in([
@@ -28,6 +33,7 @@ class StoreProductRequest extends FormRequest
             ])],
             'price_config' => ['required', 'array'],
             'is_active' => ['sometimes', 'boolean'],
+            ...$this->priceConfigRules(is_string($sellingMode) ? $sellingMode : null),
         ];
     }
 }

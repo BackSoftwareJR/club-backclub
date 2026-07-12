@@ -1,11 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { BalanceCounter } from '@/components/wallet/BalanceCounter'
 import { TopupRequestForm } from '@/components/wallet/TopupRequestForm'
+import { TopupStatusBadge } from '@/components/wallet/TopupStatusBadge'
 import { GlassPanel } from '@/components/ui/GlassPanel'
+import { WalletSkeleton } from '@/components/ui/LuxurySkeleton'
 import { api } from '@/lib/api'
 import { useClubId } from '@/hooks/useAuth'
-import { formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { useToast } from '@/providers/ToastProvider'
 import type { TopupRequest } from '@/types'
 
 export const Route = createFileRoute('/club/$clubId/_authenticated/wallet')({
@@ -14,32 +17,56 @@ export const Route = createFileRoute('/club/$clubId/_authenticated/wallet')({
 
 function WalletPage() {
   const clubId = useClubId()
+  const { toast } = useToast()
   const [balance, setBalance] = useState('0.00')
   const [requests, setRequests] = useState<TopupRequest[]>([])
   const [loading, setLoading] = useState(true)
 
+  const loadWallet = useCallback(async () => {
+    const [wallet, topups] = await Promise.all([
+      api.getWallet(clubId),
+      api.listTopupRequests(clubId),
+    ])
+    setBalance(wallet.current_balance)
+    setRequests(topups.data ?? [])
+  }, [clubId])
+
   useEffect(() => {
     const load = async () => {
       try {
-        const [wallet, topups] = await Promise.all([
-          api.getWallet(clubId),
-          api.listTopupRequests(clubId),
-        ])
-        setBalance(wallet.current_balance)
-        setRequests(topups.data ?? [])
+        await loadWallet()
+      } catch (err) {
+        toast({
+          title: 'Failed to load wallet',
+          description: err instanceof Error ? err.message : 'Unknown error',
+          variant: 'error',
+        })
       } finally {
         setLoading(false)
       }
     }
     void load()
-  }, [clubId])
+  }, [clubId, loadWallet, toast])
+
+  useEffect(() => {
+    const refreshOnFocus = () => {
+      if (document.visibilityState !== 'visible') return
+      void loadWallet().catch(() => {
+        /* silent refresh — initial load already surfaced errors */
+      })
+    }
+
+    window.addEventListener('focus', refreshOnFocus)
+    document.addEventListener('visibilitychange', refreshOnFocus)
+
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus)
+      document.removeEventListener('visibilitychange', refreshOnFocus)
+    }
+  }, [loadWallet])
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    )
+    return <WalletSkeleton />
   }
 
   return (
@@ -49,7 +76,7 @@ function WalletPage() {
         <BalanceCounter value={balance} />
       </GlassPanel>
 
-      <TopupRequestForm />
+      <TopupRequestForm onSuccess={loadWallet} />
 
       <GlassPanel>
         <h3 className="mb-4 text-lg">Your Top-up Requests</h3>
@@ -60,11 +87,14 @@ function WalletPage() {
             {requests.map((req) => (
               <li
                 key={req.id}
-                className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/5 px-4 py-3 text-sm"
               >
-                <span>€{req.amount}</span>
-                <span className="capitalize text-white/60">{req.status}</span>
+                <span className="font-medium">{formatCurrency(req.amount)}</span>
+                <TopupStatusBadge status={req.status} />
                 <span className="text-white/40">{formatDate(req.created_at)}</span>
+                {req.admin_note && req.status === 'rejected' ? (
+                  <p className="w-full text-xs text-white/50">Note: {req.admin_note}</p>
+                ) : null}
               </li>
             ))}
           </ul>

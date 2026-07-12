@@ -1,5 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { useRef, useState } from 'react'
+import { AuthScreen } from '@/components/auth/AuthScreen'
 import { PinNumpad } from '@/components/auth/PinNumpad'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { api } from '@/lib/api'
@@ -20,6 +22,7 @@ export function PinSetup({ clubId, nfcUid, clubName }: PinSetupProps) {
   const [confirmPin, setConfirmPin] = useState('')
   const [step, setStep] = useState<'create' | 'confirm'>('create')
   const [loading, setLoading] = useState(false)
+  const submittingRef = useRef(false)
 
   const handleComplete = async (entered: string) => {
     if (step === 'create') {
@@ -28,6 +31,8 @@ export function PinSetup({ clubId, nfcUid, clubName }: PinSetupProps) {
       setConfirmPin('')
       return
     }
+
+    if (submittingRef.current || loading) return
 
     if (entered !== pin) {
       toast({
@@ -41,7 +46,9 @@ export function PinSetup({ clubId, nfcUid, clubName }: PinSetupProps) {
       return
     }
 
+    submittingRef.current = true
     setLoading(true)
+
     try {
       const response = await api.pinSetup({ club_id: clubId, nfc_uid: nfcUid, pin: entered })
       login(response, nfcUid)
@@ -56,23 +63,28 @@ export function PinSetup({ clubId, nfcUid, clubName }: PinSetupProps) {
       setPin('')
       setConfirmPin('')
     } finally {
+      submittingRef.current = false
       setLoading(false)
     }
   }
 
   return (
-    <GlassPanel className="mx-auto max-w-md text-center">
-      <p className="mb-1 text-sm uppercase tracking-[0.2em] text-primary/80">Welcome</p>
-      <h1 className="mb-2 text-3xl">{clubName}</h1>
-      <p className="mb-8 text-white/60">
-        {step === 'create' ? 'Create your 6-digit PIN' : 'Confirm your PIN'}
-      </p>
-      <PinNumpad
-        disabled={loading}
-        onChange={step === 'create' ? setPin : setConfirmPin}
-        onComplete={(p) => void handleComplete(p)}
-        value={step === 'create' ? pin : confirmPin}
-      />
-    </GlassPanel>
+    <AnimatePresence mode="wait">
+      <AuthScreen key={step} screenKey={`pin-setup-${step}`}>
+        <GlassPanel className="mx-auto max-w-md text-center">
+          <p className="mb-1 text-sm uppercase tracking-[0.2em] text-primary/80">Welcome</p>
+          <h1 className="mb-2 text-3xl">{clubName}</h1>
+          <p className="mb-8 text-white/60">
+            {step === 'create' ? 'Create your 6-digit PIN' : 'Confirm your PIN'}
+          </p>
+          <PinNumpad
+            disabled={loading}
+            onChange={step === 'create' ? setPin : setConfirmPin}
+            onComplete={(p) => void handleComplete(p)}
+            value={step === 'create' ? pin : confirmPin}
+          />
+        </GlassPanel>
+      </AuthScreen>
+    </AnimatePresence>
   )
 }

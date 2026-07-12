@@ -140,6 +140,68 @@ class AiInterveneTest extends TestCase
             ->assertJsonPath('intervention_required', false);
     }
 
+    public function test_silent_fallback_when_response_content_empty(): void
+    {
+        $this->seedClub();
+        $token = $this->ownerToken();
+        $clubId = $this->clubId();
+
+        $this->seedWeeklySpendAboveThreshold($clubId);
+
+        Config::set('canopywave.api_key', 'test-canopywave-key');
+
+        Http::fake([
+            self::CANOPYWAVE_URL => Http::response([
+                'choices' => [
+                    [
+                        'message' => [
+                            'content' => '',
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $product = Product::query()
+            ->where('club_id', $clubId)
+            ->where('selling_mode', 'unit')
+            ->firstOrFail();
+
+        $response = $this->withBearer($token)->postJson("/api/clubs/{$clubId}/ai/intervene", [
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('intervention_required', false);
+    }
+
+    public function test_no_intervention_when_weekly_spend_below_threshold(): void
+    {
+        $this->seedClub();
+        $token = $this->ownerToken();
+        $clubId = $this->clubId();
+
+        Config::set('canopywave.api_key', 'test-canopywave-key');
+
+        Http::fake();
+
+        $product = Product::query()
+            ->where('club_id', $clubId)
+            ->where('selling_mode', 'unit')
+            ->firstOrFail();
+
+        $response = $this->withBearer($token)->postJson("/api/clubs/{$clubId}/ai/intervene", [
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('intervention_required', false);
+
+        Http::assertNothingSent();
+    }
+
     private function seedWeeklySpendAboveThreshold(int $clubId): void
     {
         $wallet = UserWallet::query()

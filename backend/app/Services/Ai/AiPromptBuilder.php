@@ -74,8 +74,52 @@ class AiPromptBuilder
     {
         $balance = (string) ($context['balance'] ?? '0.00');
         $purchases = $this->formatRecentPurchases($context['recent_transactions'] ?? []);
+        $tone = $this->formatThemeTone($context['theme_config'] ?? []);
 
-        return "USER CONTEXT: Balance: {$balance}. Last Purchases: {$purchases}.";
+        return "USER CONTEXT: Balance: {$balance}. Last Purchases: {$purchases}.{$tone}";
+    }
+
+    /**
+     * @param  array<string, mixed>  $themeConfig
+     */
+    private function formatThemeTone(array $themeConfig): string
+    {
+        if ($themeConfig === []) {
+            return '';
+        }
+
+        $parts = [];
+
+        $templateId = $themeConfig['template_id'] ?? null;
+        if (is_int($templateId) || is_string($templateId)) {
+            $parts[] = "template {$templateId}";
+        }
+
+        $colors = $themeConfig['colors'] ?? [];
+        if (is_array($colors)) {
+            if (! empty($colors['primary'])) {
+                $parts[] = 'primary accent '.$colors['primary'];
+            }
+            if (! empty($colors['secondary'])) {
+                $parts[] = 'secondary tone '.$colors['secondary'];
+            }
+        }
+
+        $typography = $themeConfig['typography'] ?? [];
+        if (is_array($typography)) {
+            if (! empty($typography['heading_font'])) {
+                $parts[] = 'heading font '.$typography['heading_font'];
+            }
+            if (! empty($typography['body_font'])) {
+                $parts[] = 'body font '.$typography['body_font'];
+            }
+        }
+
+        if ($parts === []) {
+            return '';
+        }
+
+        return ' Club tone: '.implode(', ', $parts).'. Match your voice to this aesthetic.';
     }
 
     /**
@@ -93,13 +137,16 @@ class AiPromptBuilder
             $metadata = $transaction['metadata'] ?? [];
             $quantity = $metadata['quantity'] ?? null;
             $unitLabel = $metadata['unit_label'] ?? 'item';
+            $productName = $transaction['product_name'] ?? null;
             $amount = $transaction['amount_deducted'] ?? '0.00';
             $when = $this->formatRelativeTime($transaction['created_at'] ?? null);
 
+            $label = $productName ?? ($quantity !== null ? "{$quantity} {$unitLabel}" : 'purchase');
+
             if ($quantity !== null) {
-                $formatted[] = sprintf('%s %s (€%s, %s)', $quantity, $unitLabel, $amount, $when);
+                $formatted[] = sprintf('%s — %s %s (€%s, %s)', $label, $quantity, $unitLabel, $amount, $when);
             } else {
-                $formatted[] = sprintf('€%s (%s)', $amount, $when);
+                $formatted[] = sprintf('%s (€%s, %s)', $label, $amount, $when);
             }
         }
 

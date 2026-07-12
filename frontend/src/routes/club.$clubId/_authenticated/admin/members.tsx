@@ -1,10 +1,11 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { MemberManager } from '@/components/admin/MemberManager'
+import { Button } from '@/components/ui/Button'
+import { LuxurySpinner } from '@/components/ui/LuxurySpinner'
 import { api } from '@/lib/api'
 import { useClubId } from '@/hooks/useAuth'
 import { getSession } from '@/lib/storage'
-import { useToast } from '@/providers/ToastProvider'
 import type { Member } from '@/types'
 
 export const Route = createFileRoute('/club/$clubId/_authenticated/admin/members')({
@@ -22,11 +23,12 @@ export const Route = createFileRoute('/club/$clubId/_authenticated/admin/members
 
 function AdminMembersPage() {
   const clubId = useClubId()
-  const { toast } = useToast()
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const loadMembers = useCallback(async () => {
+    setError(null)
     const response = await api.listMembers(clubId)
     setMembers(response.data ?? [])
   }, [clubId])
@@ -36,22 +38,38 @@ function AdminMembersPage() {
       try {
         await loadMembers()
       } catch (err) {
-        toast({
-          title: 'Failed to load members',
-          description: err instanceof Error ? err.message : 'Unknown error',
-          variant: 'error',
-        })
+        setError(err instanceof Error ? err.message : 'Failed to load members')
       } finally {
         setLoading(false)
       }
     }
     void load()
-  }, [clubId, loadMembers, toast])
+  }, [loadMembers])
 
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <LuxurySpinner label="Loading members" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4 py-20 text-center">
+        <p className="text-red-400">{error}</p>
+        <Button
+          onClick={() => {
+            setLoading(true)
+            void loadMembers()
+              .catch((err: unknown) => {
+                setError(err instanceof Error ? err.message : 'Failed to load members')
+              })
+              .finally(() => setLoading(false))
+          }}
+        >
+          Retry
+        </Button>
       </div>
     )
   }

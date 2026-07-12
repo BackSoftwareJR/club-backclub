@@ -3,12 +3,12 @@
 namespace App\Services\Treasury;
 
 use App\Exceptions\ForbiddenApiException;
+use App\Exceptions\TopupRequestNotPendingException;
 use App\Models\ClubLedger;
 use App\Models\TopupRequest;
 use App\Models\User;
 use App\Models\UserWallet;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
 
 class TopupService
 {
@@ -25,51 +25,65 @@ class TopupService
     public function approve(TopupRequest $request, User $admin): TopupRequest
     {
         if ($request->status !== TopupRequest::STATUS_PENDING) {
-            throw new InvalidArgumentException('Top-up request is not pending.');
+            throw new TopupRequestNotPendingException;
         }
 
         return DB::transaction(function () use ($request, $admin) {
-            $request->refresh();
-
-            if ($request->status !== TopupRequest::STATUS_PENDING) {
-                throw new InvalidArgumentException('Top-up request is not pending.');
-            }
-
-            $wallet = UserWallet::query()
-                ->where('club_id', $request->club_id)
-                ->where('user_id', $request->user_id)
+            $locked = TopupRequest::query()
+                ->whereKey($request->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $newBalance = bcadd((string) $wallet->current_balance, (string) $request->amount, 2);
+            if ($locked->status !== TopupRequest::STATUS_PENDING) {
+                throw new TopupRequestNotPendingException;
+            }
+
+            $wallet = UserWallet::query()
+                ->where('club_id', $locked->club_id)
+                ->where('user_id', $locked->user_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $newBalance = bcadd((string) $wallet->current_balance, (string) $locked->amount, 2);
             $wallet->update(['current_balance' => $newBalance]);
 
-            $request->update(['status' => TopupRequest::STATUS_APPROVED]);
+            $locked->update(['status' => TopupRequest::STATUS_APPROVED]);
 
             ClubLedger::query()->create([
-                'club_id' => $request->club_id,
+                'club_id' => $locked->club_id,
                 'transaction_type' => ClubLedger::TYPE_USER_TOPUP,
-                'amount' => $request->amount,
-                'description' => 'Approved top-up request #'.$request->id,
+                'amount' => $locked->amount,
+                'description' => 'Approved top-up request #'.$locked->id,
                 'handled_by' => $admin->id,
             ]);
 
-            return $request->fresh();
+            return $locked->fresh();
         });
     }
 
     public function reject(TopupRequest $request, User $admin, ?string $adminNote = null): TopupRequest
     {
         if ($request->status !== TopupRequest::STATUS_PENDING) {
-            throw new InvalidArgumentException('Top-up request is not pending.');
+            throw new TopupRequestNotPendingException;
         }
 
-        $request->update([
-            'status' => TopupRequest::STATUS_REJECTED,
-            'admin_note' => $adminNote,
-        ]);
+        return DB::transaction(function () use ($request, $adminNote) {
+            $locked = TopupRequest::query()
+                ->whereKey($request->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        return $request->fresh();
+            if ($locked->status !== TopupRequest::STATUS_PENDING) {
+                throw new TopupRequestNotPendingException;
+            }
+
+            $locked->update([
+                'status' => TopupRequest::STATUS_REJECTED,
+                'admin_note' => $adminNote,
+            ]);
+
+            return $locked->fresh();
+        });
     }
 
     /**

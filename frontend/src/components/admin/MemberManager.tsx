@@ -46,12 +46,19 @@ export function MemberManager({ clubId, members, onRefresh }: MemberManagerProps
 
   const memberLabel = (member: Member) => member.email ?? `User #${member.user_id}`
 
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+
   const createMember = async () => {
     const trimmedEmail = email.trim()
     const trimmedNfc = nfcUid.trim()
 
     if (!trimmedEmail || !trimmedNfc) {
       toast({ title: 'Email and NFC UID are required', variant: 'error' })
+      return
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      toast({ title: 'Enter a valid email address', variant: 'error' })
       return
     }
 
@@ -240,7 +247,11 @@ export function MemberManager({ clubId, members, onRefresh }: MemberManagerProps
             <Button className="flex-1" onClick={closeAddModal} variant="ghost">
               Cancel
             </Button>
-            <Button className="flex-1" disabled={creating} onClick={() => void createMember()}>
+            <Button
+              className="flex-1"
+              disabled={creating || !email.trim() || !nfcUid.trim() || !isValidEmail(email.trim())}
+              onClick={() => void createMember()}
+            >
               {creating ? 'Creating…' : 'Create member'}
             </Button>
           </div>
