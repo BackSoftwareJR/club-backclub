@@ -11,13 +11,19 @@ use Illuminate\Validation\ValidationException;
  * Hostinger deploy: public_html/api/index.php receives paths like /entry/... (no /api prefix).
  * Set API_ROUTE_PREFIX= (empty) in production .env.
  * Local dev: omit API_ROUTE_PREFIX → defaults to "api".
+ *
+ * Must read .env directly — env() returns null for all keys when config is cached.
  */
 $apiRoutePrefix = (static function (): string {
-    if (env('API_ROUTE_PREFIX') === null && ! isset($_ENV['API_ROUTE_PREFIX']) && ! isset($_SERVER['API_ROUTE_PREFIX'])) {
-        return 'api';
+    $envPath = dirname(__DIR__).'/.env';
+    if (is_readable($envPath)) {
+        $content = file_get_contents($envPath);
+        if (preg_match('/^API_ROUTE_PREFIX\s*=\s*(.*)$/m', $content, $matches)) {
+            return trim($matches[1], " \t\n\r\0\x0B\"'");
+        }
     }
 
-    return (string) env('API_ROUTE_PREFIX', '');
+    return 'api';
 })();
 
 $isApiRequest = static function (Request $request) use ($apiRoutePrefix): bool {
