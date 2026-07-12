@@ -81,8 +81,8 @@ fi
 echo "==> Migrazioni database..."
 php artisan migrate --force
 
-echo "==> Storage link..."
-php artisan storage:link || true
+echo "==> Storage link (public_html/storage → Laravel storage/app/public)..."
+ln -sfn "$LARAVEL_PATH/storage/app/public" "$PUBLIC_HTML/storage"
 
 echo "==> Permessi storage e cache..."
 chmod -R 775 storage bootstrap/cache

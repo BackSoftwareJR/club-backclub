@@ -22,6 +22,7 @@ Repository: [BackSoftwareJR/club-backclub](https://github.com/BackSoftwareJR/clu
 │   ├── index.html                       ← React SPA (frontend/dist/)
 │   ├── assets/                          ← bundle JS/CSS
 │   ├── .htaccess                        ← SPA fallback + pass-through /api
+│   ├── storage → ../../api/storage/app/public   ← symlink immagini upload
 │   └── api/                             ← SOLO entry point Laravel (public/)
 │       ├── index.php                    ← bootstrap da ../../api/
 │       └── .htaccess                    ← rewrite Laravel standard
@@ -71,6 +72,20 @@ In produzione Hostinger, la cartella fisica **è già** `/api/`. Se Laravel aggi
 1. `API_ROUTE_PREFIX=` (vuoto) nel `.env` di produzione
 2. `public_html/api/index.php` rimuove `/api` dall'URI prima del bootstrap Laravel
 3. Frontend: `VITE_API_URL=https://club.backclub.it/api` — axios chiama `/entry/...` → URL completo `club.backclub.it/api/entry/...`
+
+### Immagini upload (cover prodotti, logo club)
+
+Laravel salva in `api/storage/app/public/`. L'URL generato è `https://club.backclub.it/storage/...`.
+
+Su Hostinger crea **una tantum** il symlink web:
+
+```bash
+ln -sfn ~/domains/club.backclub.it/api/storage/app/public \
+  ~/domains/club.backclub.it/public_html/storage
+chmod -R 775 ~/domains/club.backclub.it/api/storage
+```
+
+Nei deploy frontend con `rsync --delete` proteggi `storage/` (`--filter 'protect storage/'`) altrimenti il symlink viene rimosso.
 
 ---
 
