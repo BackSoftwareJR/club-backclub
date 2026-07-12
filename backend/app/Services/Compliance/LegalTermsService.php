@@ -63,4 +63,21 @@ class LegalTermsService
             ],
         );
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function identityDeclarationMetadata(?string $context = null): array
+    {
+        $metadata = [
+            'declared_identity' => (string) config('legal.owner_identity_name', 'Julian Rovera'),
+            'identity_declaration_recorded' => true,
+        ];
+
+        if ($context !== null) {
+            $metadata['context'] = $context;
+        }
+
+        return $metadata;
+    }
 }

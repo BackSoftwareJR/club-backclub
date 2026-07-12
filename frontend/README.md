@@ -30,8 +30,8 @@ App runs at `http://localhost:5173`.
 
 ### Demo entry URLs (after backend seed)
 
-- Owner (PIN `123456`): `/entry/1/NFC-OWNER-001`
-- Member (PIN setup): `/entry/1/NFC-MEMBER-001`
+- Owner: `/entry/1/NFC-OWNER-001` (PIN known only to the operator — not shown in UI)
+- Member (PIN setup on first visit): `/entry/1/NFC-MEMBER-001`
 
 ## Build
 

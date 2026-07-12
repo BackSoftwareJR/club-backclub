@@ -42,6 +42,10 @@ export function resolveApiErrorMessage(
     return 'Access blocked for 24 hours.'
   }
 
+  if (code === 'forbidden' && fallback?.includes('Terms acceptance')) {
+    return 'Devi accettare i nuovi termini. Apri di nuovo il link NFC del club.'
+  }
+
   if (status === 402) {
     return fallback ?? 'Insufficient wallet balance. Top up your wallet to continue.'
   }

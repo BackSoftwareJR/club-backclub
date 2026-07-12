@@ -14,10 +14,6 @@ abstract class ApiException extends Exception
 
     public function render(Request $request): ?JsonResponse
     {
-        if (! $request->is('api/*')) {
-            return null;
-        }
-
         return response()->json([
             'message' => $this->getMessage(),
             'error' => $this->errorCode(),

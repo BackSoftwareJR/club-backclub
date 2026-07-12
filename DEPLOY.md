@@ -131,7 +131,7 @@ curl -s https://club.backclub.it/api/entry/1/NFC-OWNER-001
 curl -sI https://club.backclub.it | head -3
 ```
 
-Apri browser: `https://club.backclub.it/entry/1/NFC-OWNER-001` (PIN demo owner: `123456` dopo seed).
+Apri browser: `https://club.backclub.it/entry/1/NFC-OWNER-001` e inserisci il PIN owner (non esposto in app o documentazione).
 
 ### 3.8 Pulizia (opzionale)
 

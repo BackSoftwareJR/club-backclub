@@ -95,6 +95,7 @@ class GhostSecurityTest extends TestCase
             'club_id' => $this->clubId(),
             'nfc_uid' => 'NFC-UNKNOWN',
             'terms_version' => config('legal.version'),
+            'identity_declaration' => true,
         ])->assertNotFound()
             ->assertJsonPath('error', 'ghost_redirect');
     }

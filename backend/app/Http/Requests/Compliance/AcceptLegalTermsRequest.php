@@ -20,6 +20,7 @@ class AcceptLegalTermsRequest extends FormRequest
             'club_id' => ['required', 'integer', 'exists:clubs,id'],
             'nfc_uid' => ['required', 'string', 'max:64'],
             'terms_version' => ['required', 'string', 'max:32'],
+            'identity_declaration' => ['required', 'accepted'],
         ];
     }
 }

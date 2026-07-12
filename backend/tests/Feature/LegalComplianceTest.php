@@ -61,6 +61,7 @@ class LegalComplianceTest extends TestCase
             'club_id' => $member->club_id,
             'nfc_uid' => 'NFC-MEMBER-001',
             'terms_version' => config('legal.version'),
+            'identity_declaration' => true,
         ])->assertOk()
             ->assertJsonPath('accepted', true);
 
@@ -74,6 +75,15 @@ class LegalComplianceTest extends TestCase
             'club_id' => $member->club_id,
             'event_type' => 'terms_accepted',
         ]);
+
+        $log = ActivityLog::query()
+            ->where('club_id', $member->club_id)
+            ->where('event_type', 'terms_accepted')
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame('Julian Rovera', $log->metadata['declared_identity'] ?? null);
+        $this->assertTrue($log->metadata['identity_declaration_recorded'] ?? false);
     }
 
     public function test_create_member_rejects_real_email_provider(): void
@@ -127,6 +137,6 @@ class LegalComplianceTest extends TestCase
         $this->withToken($token)->postJson('/api/me/clubs', [
             'name' => 'No Terms Club',
         ])->assertUnprocessable()
-            ->assertJsonValidationErrors(['terms_accepted', 'terms_version']);
+            ->assertJsonValidationErrors(['terms_accepted', 'terms_version', 'identity_declaration']);
     }
 }

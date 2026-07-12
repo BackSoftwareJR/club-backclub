@@ -59,7 +59,13 @@ class UserClubController extends Controller
             eventType: 'terms_accepted',
             member: $member,
             request: $request,
-            metadata: ['terms_version' => $validated['terms_version'], 'context' => 'club_creation'],
+            metadata: array_merge(
+                [
+                    'terms_version' => $validated['terms_version'],
+                    'context' => 'club_creation',
+                ],
+                $this->legalTermsService->identityDeclarationMetadata('club_creation'),
+            ),
         );
 
         return response()->json([

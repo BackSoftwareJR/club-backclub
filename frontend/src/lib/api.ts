@@ -99,7 +99,12 @@ export const api = {
   getLegalTerms: () =>
     request<{ data: LegalTermsDocument }>({ method: 'GET', url: '/legal/terms' }),
 
-  acceptLegalTerms: (body: { club_id: number; nfc_uid: string; terms_version: string }) =>
+  acceptLegalTerms: (body: {
+    club_id: number
+    nfc_uid: string
+    terms_version: string
+    identity_declaration: boolean
+  }) =>
     request<{ accepted: boolean; terms_version: string; accepted_at: string }>({
       method: 'POST',
       url: '/legal/accept',
@@ -109,7 +114,12 @@ export const api = {
   listMyClubs: () =>
     request<MyClubsResponse>({ method: 'GET', url: '/me/clubs' }),
 
-  createClub: (body: { name: string; terms_version: string; terms_accepted: boolean }) =>
+  createClub: (body: {
+    name: string
+    terms_version: string
+    terms_accepted: boolean
+    identity_declaration: boolean
+  }) =>
     request<CreateClubResponse>({ method: 'POST', url: '/me/clubs', data: body }),
 
   getWallet: (clubId: number) =>

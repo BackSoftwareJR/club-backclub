@@ -20,6 +20,7 @@ class CreateClubRequest extends FormRequest
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'terms_version' => ['required', 'string', 'max:32'],
             'terms_accepted' => ['required', 'accepted'],
+            'identity_declaration' => ['required', 'accepted'],
         ];
     }
 }

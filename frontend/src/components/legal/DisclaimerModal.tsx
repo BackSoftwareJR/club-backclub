@@ -13,7 +13,7 @@ interface DisclaimerModalProps {
 }
 
 const defaultDisclaimer =
-  'Questa piattaforma è un database chiuso ad uso esclusivo di Julian Rovera come salvadanaio personale. Non è un sistema di vendita, non gestisce denaro di terzi e le email/dati presenti sono fittizi o a solo scopo di test. Ogni accesso non autorizzato è vietato e tracciato.'
+  'Questa piattaforma è un database chiuso ad uso esclusivo di Julian Rovera. Solo Julian Rovera può accedere: nessun familiare, amico, collaboratore, bot, intelligenza artificiale o terzo. Accedendo dichiari espressamente di essere Julian Rovera; ogni dichiarazione viene registrata con data, ora, IP e dispositivo. Non è un sistema di vendita, non gestisce denaro di terzi e i dati presenti sono fittizi o a solo scopo di test. Ogni accesso non autorizzato è vietato e tracciato.'
 
 export function DisclaimerModal({
   open,
@@ -59,7 +59,7 @@ export function DisclaimerModal({
 
         <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/55">
           <Clock3 className="h-4 w-4 text-primary/80" />
-          <span>Registrazione accettazione: {timestamp}</span>
+          <span>Registrazione dichiarazione di identità: {timestamp}</span>
         </div>
 
         {children}
@@ -72,8 +72,9 @@ export function DisclaimerModal({
             type="checkbox"
           />
           <span>
-            Confermo di essere Julian Rovera o un accesso da lui espressamente autorizzato e accetto
-            integralmente il disclaimer.
+            Confermo di essere Julian Rovera, unico titolare autorizzato, e accetto integralmente i
+            termini e il disclaimer. Sono consapevole che questa dichiarazione di identità verrà
+            registrata in modo permanente.
           </span>
         </label>
 

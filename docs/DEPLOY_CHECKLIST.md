@@ -133,7 +133,7 @@ Artifact CI (senza SSH): scaricabili da Actions → workflow **Deploy** → Arti
 ## Smoke test funzionale
 
 - [ ] URL NFC apre schermata PIN / branding club
-- [ ] Login owner (`NFC-OWNER-001` / `123456` se seeded)
+- [ ] Login owner (`NFC-OWNER-001` + PIN configurato in seed/env)
 - [ ] Saldo wallet visibile
 - [ ] Lista prodotti carica
 - [ ] Dashboard admin accessibile

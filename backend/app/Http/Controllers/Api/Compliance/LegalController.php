@@ -68,10 +68,13 @@ class LegalController extends Controller
             eventType: 'terms_accepted',
             member: $member,
             request: $request,
-            metadata: [
-                'terms_version' => $version,
-                'acceptance_id' => $acceptance->id,
-            ],
+            metadata: array_merge(
+                [
+                    'terms_version' => $version,
+                    'acceptance_id' => $acceptance->id,
+                ],
+                $this->legalTermsService->identityDeclarationMetadata('nfc_entry'),
+            ),
         );
 
         return response()->json([

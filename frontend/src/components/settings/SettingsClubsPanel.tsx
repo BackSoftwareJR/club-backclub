@@ -76,6 +76,7 @@ export function SettingsClubsPanel() {
         name: pendingClubName,
         terms_version: termsVersion,
         terms_accepted: true,
+        identity_declaration: true,
       })
       setCreatedClub(response)
       setClubName('')

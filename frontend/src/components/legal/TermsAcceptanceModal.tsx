@@ -41,6 +41,7 @@ export function TermsAcceptanceModal({ open, clubId, nfcUid, onAccepted }: Terms
         club_id: clubId,
         nfc_uid: nfcUid,
         terms_version: terms.version,
+        identity_declaration: true,
       })
       onAccepted()
     } catch (err) {

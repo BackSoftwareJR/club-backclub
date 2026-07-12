@@ -37,6 +37,7 @@ class UserClubTest extends TestCase
             'name' => 'Midnight Lounge',
             'terms_version' => config('legal.version'),
             'terms_accepted' => true,
+            'identity_declaration' => true,
         ]);
 
         $response->assertCreated()

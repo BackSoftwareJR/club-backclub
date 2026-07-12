@@ -60,12 +60,12 @@ Set `VITE_API_URL=http://localhost:8000/api` in `frontend/.env`.
 
 After `php artisan migrate --seed`, **The Velvet Room** club is created with:
 
-| Role | NFC UID | PIN | Entry URL |
-|------|---------|-----|-----------|
-| Owner (admin) | `NFC-OWNER-001` | `123456` | `http://localhost:5173/entry/1/NFC-OWNER-001` |
-| Member | `NFC-MEMBER-001` | *(setup required)* | `http://localhost:5173/entry/1/NFC-MEMBER-001` |
+| Role | NFC UID | Entry URL |
+|------|---------|-----------|
+| Owner (admin) | `NFC-OWNER-001` | `http://localhost:5173/entry/1/NFC-OWNER-001` |
+| Member | `NFC-MEMBER-001` | `http://localhost:5173/entry/1/NFC-MEMBER-001` |
 
-The member card has no PIN yet — first scan shows the PIN setup screen. The owner can access the admin dashboard after login.
+The member card has no PIN yet — first scan shows the PIN setup screen. The owner PIN is never displayed in the application.
 
 ## Verification
 
