@@ -1,4 +1,4 @@
-import type { AuthSession } from '@/types'
+import type { AuthSession, ThemeConfig } from '@/types'
 
 const TOKEN_KEY = 'club_crm_token'
 const SESSION_KEY = 'club_crm_session'
@@ -34,6 +34,19 @@ export function setSession(session: AuthSession): void {
 export function clearSession(): void {
   sessionStorage.removeItem(SESSION_KEY)
   clearToken()
+}
+
+export function setSessionTheme(themeConfig: ThemeConfig): void {
+  const session = getSession()
+  if (!session) return
+
+  setSession({
+    ...session,
+    club: {
+      ...session.club,
+      theme_config: themeConfig,
+    },
+  })
 }
 
 export interface EntryContext {

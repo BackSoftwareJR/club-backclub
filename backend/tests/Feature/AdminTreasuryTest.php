@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\ClubLedger;
+use App\Models\Product;
 use App\Models\User;
 use App\Models\UserWallet;
+use App\Models\WalletTransaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\InteractsWithClubApi;
 use Tests\TestCase;
@@ -160,5 +162,49 @@ class AdminTreasuryTest extends TestCase
                 'description' => 'Blocked',
             ])
             ->assertForbidden();
+    }
+
+    public function test_admin_can_view_analytics_dashboard_payload(): void
+    {
+        $this->seedClub();
+        $clubId = $this->clubId();
+        $ownerToken = $this->ownerToken();
+
+        $ownerWallet = UserWallet::query()
+            ->where('club_id', $clubId)
+            ->whereHas('user', fn ($query) => $query->where('email', 'owner@velvet.club'))
+            ->firstOrFail();
+
+        $product = Product::query()
+            ->where('club_id', $clubId)
+            ->where('selling_mode', Product::MODE_UNIT)
+            ->firstOrFail();
+
+        WalletTransaction::query()->create([
+            'wallet_id' => $ownerWallet->id,
+            'product_id' => $product->id,
+            'amount_deducted' => '20.00',
+            'metadata' => ['quantity' => 1],
+            'created_at' => now()->subDays(1),
+        ]);
+
+        ClubLedger::query()->create([
+            'club_id' => $clubId,
+            'transaction_type' => ClubLedger::TYPE_USER_TOPUP,
+            'amount' => '50.00',
+            'description' => 'Top-up',
+            'handled_by' => User::query()->where('email', 'owner@velvet.club')->value('id'),
+            'created_at' => now()->subDays(2),
+        ]);
+
+        $response = $this->withBearer($ownerToken)->getJson("/api/clubs/{$clubId}/admin/analytics");
+
+        $response->assertOk()
+            ->assertJsonCount(30, 'cassa_trend')
+            ->assertJsonPath('top_consumed_products.0.product_name', $product->name)
+            ->assertJsonPath('top_consumed_products.0.purchases_count', 1)
+            ->assertJsonPath('member_vice_stats.total_members', 2)
+            ->assertJsonPath('member_vice_stats.total_purchases', 1)
+            ->assertJsonPath('member_vice_stats.top_spender_email', 'owner@velvet.club');
     }
 }

@@ -12,6 +12,7 @@ class ProductController extends Controller
     public function index(int $clubId): JsonResponse
     {
         $products = Product::query()
+            ->with('galleryMedia')
             ->where('club_id', $clubId)
             ->where('is_active', true)
             ->orderBy('name')

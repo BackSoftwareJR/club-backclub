@@ -14,7 +14,8 @@ import { LuxurySpinner } from '@/components/ui/LuxurySpinner'
 import { api } from '@/lib/api'
 import { isApiRequestError } from '@/lib/apiErrors'
 import { calculatePrice, defaultQuantity } from '@/lib/pricing'
-import { useClubId } from '@/hooks/useAuth'
+import { useClubId, useTheme } from '@/hooks/useAuth'
+import { playPurchaseConfirmSound, triggerPurchaseHaptic } from '@/lib/interactionFeedback'
 import { useToast } from '@/providers/ToastProvider'
 import type { Product } from '@/types'
 
@@ -35,6 +36,7 @@ function formatQuantityLabel(product: Product, quantity: number): string {
 function PurchasePage() {
   const { productId } = Route.useParams()
   const clubId = useClubId()
+  const { themeConfig } = useTheme()
   const { toast } = useToast()
 
   const [product, setProduct] = useState<Product | null>(null)
@@ -143,6 +145,8 @@ function PurchasePage() {
         previousBalance,
         newBalance: result.new_balance,
       })
+      playPurchaseConfirmSound(themeConfig?.interactions?.sounds_enabled ?? true)
+      triggerPurchaseHaptic(themeConfig?.interactions?.haptics_enabled ?? true)
     } catch (err) {
       if (isApiRequestError(err) && (err.status === 402 || err.code === 'insufficient_funds')) {
         setConfirmOpen(false)

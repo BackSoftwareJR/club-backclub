@@ -47,7 +47,7 @@ class AuthController extends Controller
             'nfc_uid' => $member->nfc_uid,
             'requires_pin_setup' => $member->requiresPinSetup(),
             'club_name' => $club->name,
-            'theme_config' => $club->theme_config,
+            'theme_config' => $club->resolvedThemeConfig(),
         ]);
     }
 
@@ -135,7 +135,7 @@ class AuthController extends Controller
             'club' => [
                 'id' => $club->id,
                 'name' => $club->name,
-                'theme_config' => $club->theme_config,
+                'theme_config' => $club->resolvedThemeConfig(),
             ],
             'is_club_owner' => $user->ownsClub($club),
         ];

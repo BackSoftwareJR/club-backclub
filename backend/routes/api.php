@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AdminController;
+use App\Http\Controllers\Api\Admin\AdminMediaController;
 use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\ProductController;
@@ -31,6 +32,7 @@ Route::middleware(['jwt.auth', 'club.member.active'])->group(function () {
 Route::middleware(['jwt.auth', 'club.member.active', 'club.admin'])->group(function () {
     Route::prefix('clubs/{club_id}/admin')->middleware('club.scope')->group(function () {
         Route::get('/treasury', [AdminController::class, 'treasury']);
+        Route::get('/analytics', [AdminController::class, 'analytics']);
         Route::get('/topup-requests', [AdminController::class, 'listTopupRequests']);
         Route::post('/topup-requests/{id}/approve', [AdminController::class, 'approveTopupRequest']);
         Route::post('/topup-requests/{id}/reject', [AdminController::class, 'rejectTopupRequest']);
@@ -47,5 +49,17 @@ Route::middleware(['jwt.auth', 'club.member.active', 'club.admin'])->group(funct
         Route::post('/products', [AdminController::class, 'storeProduct']);
         Route::patch('/products/{product_id}', [AdminController::class, 'updateProduct']);
         Route::delete('/products/{product_id}', [AdminController::class, 'destroyProduct']);
+        Route::post('/products/{product_id}/cover', [AdminMediaController::class, 'uploadProductCover']);
+        Route::delete('/products/{product_id}/cover', [AdminMediaController::class, 'deleteProductCover']);
+        Route::post('/products/{product_id}/gallery', [AdminMediaController::class, 'uploadProductGalleryImage']);
+        Route::delete('/products/{product_id}/gallery/{media_id}', [AdminMediaController::class, 'deleteProductGalleryImage']);
+        Route::patch('/products/{product_id}/gallery/reorder', [AdminMediaController::class, 'reorderProductGallery']);
+
+        Route::get('/identity', [AdminMediaController::class, 'showClubIdentity']);
+        Route::patch('/appearance', [AdminMediaController::class, 'updateClubAppearance']);
+        Route::post('/identity/logo', [AdminMediaController::class, 'uploadClubLogo']);
+        Route::delete('/identity/logo', [AdminMediaController::class, 'deleteClubLogo']);
+        Route::post('/identity/hero', [AdminMediaController::class, 'uploadClubHero']);
+        Route::delete('/identity/hero', [AdminMediaController::class, 'deleteClubHero']);
     });
 });

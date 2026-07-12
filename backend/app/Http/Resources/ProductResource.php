@@ -19,6 +19,12 @@ class ProductResource extends JsonResource
             'selling_mode' => $this->selling_mode,
             'price_config' => $this->price_config,
             'is_active' => $this->is_active,
+            'cover_image_url' => $this->coverImageUrl(),
+            'gallery' => $this->galleryMedia->map(fn ($media) => [
+                'id' => $media->id,
+                'image_url' => $media->image_url,
+                'sort_order' => $media->sort_order,
+            ])->values(),
         ];
     }
 }

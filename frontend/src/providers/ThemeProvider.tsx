@@ -8,10 +8,13 @@ import {
   type ReactNode,
 } from 'react'
 import type { ThemeConfig } from '@/types'
+import { setSessionTheme } from '@/lib/storage'
 
 interface ThemeContextValue {
   themeConfig: ThemeConfig | null
   applyTheme: (config: ThemeConfig) => void
+  previewTheme: (config: ThemeConfig) => void
+  clearThemePreview: () => void
   templateId: number
 }
 
@@ -47,11 +50,26 @@ export function ThemeProvider({
   initialTheme?: ThemeConfig | null
 }) {
   const [themeConfig, setThemeConfig] = useState<ThemeConfig | null>(initialTheme ?? null)
+  const [previewConfig, setPreviewConfig] = useState<ThemeConfig | null>(null)
 
   const applyTheme = useCallback((config: ThemeConfig) => {
     applyThemeToDocument(config)
+    setPreviewConfig(null)
     setThemeConfig(config)
+    setSessionTheme(config)
   }, [])
+
+  const previewTheme = useCallback((config: ThemeConfig) => {
+    applyThemeToDocument(config)
+    setPreviewConfig(config)
+  }, [])
+
+  const clearThemePreview = useCallback(() => {
+    setPreviewConfig(null)
+    if (themeConfig) {
+      applyThemeToDocument(themeConfig)
+    }
+  }, [themeConfig])
 
   useEffect(() => {
     if (initialTheme) {
@@ -62,10 +80,12 @@ export function ThemeProvider({
   const value = useMemo(
     () => ({
       themeConfig,
+      previewTheme,
+      clearThemePreview,
       applyTheme,
-      templateId: themeConfig?.template_id ?? 1,
+      templateId: previewConfig?.template_id ?? themeConfig?.template_id ?? 1,
     }),
-    [themeConfig, applyTheme],
+    [themeConfig, previewConfig, previewTheme, clearThemePreview, applyTheme],
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

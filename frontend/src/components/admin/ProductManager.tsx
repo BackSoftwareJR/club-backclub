@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import * as Switch from '@radix-ui/react-switch'
 import { Button } from '@/components/ui/Button'
 import { GlassPanel } from '@/components/ui/GlassPanel'
@@ -13,6 +13,7 @@ import type {
   PriceConfigCustomText,
   PriceConfigUnit,
   Product,
+  ProductGalleryImage,
   ProductPayload,
   SellingMode,
 } from '@/types'
@@ -88,11 +89,12 @@ export function ProductManager({ clubId }: ProductManagerProps) {
   const [form, setForm] = useState<ProductFormState>(emptyForm())
   const [saving, setSaving] = useState(false)
   const [deactivatingId, setDeactivatingId] = useState<number | null>(null)
+  const [updatingMediaFor, setUpdatingMediaFor] = useState<number | null>(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const response = await api.listAdminProducts(clubId)
     setProducts(response.data)
-  }
+  }, [clubId])
 
   useEffect(() => {
     const init = async () => {
@@ -105,7 +107,7 @@ export function ProductManager({ clubId }: ProductManagerProps) {
       }
     }
     void init()
-  }, [clubId])
+  }, [load])
 
   const openCreate = () => {
     setEditingProduct(null)
@@ -205,6 +207,106 @@ export function ProductManager({ clubId }: ProductManagerProps) {
     }
   }
 
+  const uploadCover = async (productId: number, file: File | null) => {
+    if (!file) return
+
+    setUpdatingMediaFor(productId)
+    try {
+      await api.uploadProductCover(clubId, productId, file)
+      toast({ title: 'Cover updated', variant: 'success' })
+      await load()
+    } catch (err) {
+      toast({
+        title: 'Cover upload failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'error',
+      })
+    } finally {
+      setUpdatingMediaFor(null)
+    }
+  }
+
+  const removeCover = async (productId: number) => {
+    setUpdatingMediaFor(productId)
+    try {
+      await api.deleteProductCover(clubId, productId)
+      toast({ title: 'Cover removed', variant: 'success' })
+      await load()
+    } catch (err) {
+      toast({
+        title: 'Cover removal failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'error',
+      })
+    } finally {
+      setUpdatingMediaFor(null)
+    }
+  }
+
+  const uploadGallery = async (productId: number, file: File | null) => {
+    if (!file) return
+
+    setUpdatingMediaFor(productId)
+    try {
+      await api.uploadProductGalleryImage(clubId, productId, file)
+      toast({ title: 'Gallery image added', variant: 'success' })
+      await load()
+    } catch (err) {
+      toast({
+        title: 'Gallery upload failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'error',
+      })
+    } finally {
+      setUpdatingMediaFor(null)
+    }
+  }
+
+  const removeGalleryImage = async (productId: number, mediaId: number) => {
+    setUpdatingMediaFor(productId)
+    try {
+      await api.deleteProductGalleryImage(clubId, productId, mediaId)
+      toast({ title: 'Gallery image removed', variant: 'success' })
+      await load()
+    } catch (err) {
+      toast({
+        title: 'Gallery removal failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'error',
+      })
+    } finally {
+      setUpdatingMediaFor(null)
+    }
+  }
+
+  const reorderGallery = async (product: Product, media: ProductGalleryImage, direction: 'left' | 'right') => {
+    const ordered = [...product.gallery].sort((a, b) => a.sort_order - b.sort_order)
+    const sourceIndex = ordered.findIndex((item) => item.id === media.id)
+    const targetIndex = direction === 'left' ? sourceIndex - 1 : sourceIndex + 1
+    if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= ordered.length) return
+
+    const swapped = [...ordered]
+    ;[swapped[sourceIndex], swapped[targetIndex]] = [swapped[targetIndex], swapped[sourceIndex]]
+
+    setUpdatingMediaFor(product.id)
+    try {
+      await api.reorderProductGallery(
+        clubId,
+        product.id,
+        swapped.map((item) => item.id),
+      )
+      await load()
+    } catch (err) {
+      toast({
+        title: 'Reorder failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'error',
+      })
+    } finally {
+      setUpdatingMediaFor(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -231,36 +333,48 @@ export function ProductManager({ clubId }: ProductManagerProps) {
       ) : (
         <div className="grid gap-4">
           {products.map((product) => (
-            <GlassPanel key={product.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
-              <div>
-                <p className="font-medium">{product.name}</p>
-                <p className="text-sm text-white/50">
-                  {product.selling_mode.replace('_', ' ')} · from {formatProductPrice(product)}
-                </p>
+            <GlassPanel key={product.id} className="space-y-4 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="font-medium">{product.name}</p>
+                  <p className="text-sm text-white/50">
+                    {product.selling_mode.replace('_', ' ')} · from {formatProductPrice(product)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-1 text-xs',
+                      product.is_active
+                        ? 'bg-emerald-500/15 text-emerald-400'
+                        : 'bg-red-500/15 text-red-400',
+                    )}
+                  >
+                    {product.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                  <Button onClick={() => openEdit(product)} size="sm" variant="outline">
+                    Edit
+                  </Button>
+                  <Button
+                    disabled={deactivatingId === product.id || !product.is_active}
+                    onClick={() => void deactivate(product.id)}
+                    size="sm"
+                    variant="destructive"
+                  >
+                    Deactivate
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'rounded-full px-2 py-1 text-xs',
-                    product.is_active
-                      ? 'bg-emerald-500/15 text-emerald-400'
-                      : 'bg-red-500/15 text-red-400',
-                  )}
-                >
-                  {product.is_active ? 'Active' : 'Inactive'}
-                </span>
-                <Button onClick={() => openEdit(product)} size="sm" variant="outline">
-                  Edit
-                </Button>
-                <Button
-                  disabled={deactivatingId === product.id || !product.is_active}
-                  onClick={() => void deactivate(product.id)}
-                  size="sm"
-                  variant="destructive"
-                >
-                  Deactivate
-                </Button>
-              </div>
+
+              <ProductMediaManager
+                busy={updatingMediaFor === product.id}
+                onDeleteCover={() => void removeCover(product.id)}
+                onDeleteGalleryImage={(mediaId) => void removeGalleryImage(product.id, mediaId)}
+                onReorder={(media, direction) => void reorderGallery(product, media, direction)}
+                onUploadCover={(file) => void uploadCover(product.id, file)}
+                onUploadGallery={(file) => void uploadGallery(product.id, file)}
+                product={product}
+              />
             </GlassPanel>
           ))}
         </div>
@@ -416,6 +530,119 @@ export function ProductManager({ clubId }: ProductManagerProps) {
           </div>
         </div>
       </Modal>
+    </div>
+  )
+}
+
+interface ProductMediaManagerProps {
+  product: Product
+  busy: boolean
+  onUploadCover: (file: File | null) => void
+  onDeleteCover: () => void
+  onUploadGallery: (file: File | null) => void
+  onDeleteGalleryImage: (mediaId: number) => void
+  onReorder: (media: ProductGalleryImage, direction: 'left' | 'right') => void
+}
+
+function ProductMediaManager({
+  product,
+  busy,
+  onUploadCover,
+  onDeleteCover,
+  onUploadGallery,
+  onDeleteGalleryImage,
+  onReorder,
+}: ProductMediaManagerProps) {
+  const orderedGallery = [...product.gallery].sort((a, b) => a.sort_order - b.sort_order)
+
+  return (
+    <div className="space-y-4 rounded-xl border border-white/10 bg-black/20 p-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-wide text-white/55">Cover image</p>
+          <div className="h-36 overflow-hidden rounded-lg border border-white/10 bg-black/40">
+            {product.cover_image_url ? (
+              <img alt={`${product.name} cover`} className="h-full w-full object-cover" src={product.cover_image_url} />
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-white/40">No cover image</div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <label className="flex-1">
+              <input
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                className="hidden"
+                onChange={(event) => {
+                  onUploadCover(event.target.files?.[0] ?? null)
+                  event.currentTarget.value = ''
+                }}
+                type="file"
+              />
+              <Button asChild className="w-full" disabled={busy} size="sm" variant="outline">
+                <span>{busy ? 'Uploading…' : product.cover_image_url ? 'Replace cover' : 'Upload cover'}</span>
+              </Button>
+            </label>
+            <Button disabled={!product.cover_image_url || busy} onClick={onDeleteCover} size="sm" variant="destructive">
+              Remove
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-wide text-white/55">Gallery ({orderedGallery.length})</p>
+          <div className="flex min-h-36 flex-wrap gap-2 rounded-lg border border-white/10 bg-black/40 p-2">
+            {orderedGallery.length === 0 ? (
+              <div className="flex w-full items-center justify-center text-xs text-white/40">No gallery images</div>
+            ) : (
+              orderedGallery.map((media, index) => (
+                <div key={media.id} className="relative h-16 w-16 overflow-hidden rounded-md border border-white/15">
+                  <img alt={`${product.name} gallery`} className="h-full w-full object-cover" src={media.image_url} />
+                  <div className="absolute inset-x-0 bottom-0 flex bg-black/65 text-[10px]">
+                    <button
+                      className="flex-1 disabled:opacity-30"
+                      disabled={busy || index === 0}
+                      onClick={() => onReorder(media, 'left')}
+                      type="button"
+                    >
+                      ←
+                    </button>
+                    <button
+                      className="flex-1 disabled:opacity-30"
+                      disabled={busy || index === orderedGallery.length - 1}
+                      onClick={() => onReorder(media, 'right')}
+                      type="button"
+                    >
+                      →
+                    </button>
+                    <button
+                      className="flex-1 text-red-300 disabled:opacity-30"
+                      disabled={busy}
+                      onClick={() => onDeleteGalleryImage(media.id)}
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <label className="block">
+            <input
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              className="hidden"
+              onChange={(event) => {
+                onUploadGallery(event.target.files?.[0] ?? null)
+                event.currentTarget.value = ''
+              }}
+              type="file"
+            />
+            <Button asChild className="w-full" disabled={busy} size="sm" variant="outline">
+              <span>{busy ? 'Uploading…' : 'Add gallery image'}</span>
+            </Button>
+          </label>
+        </div>
+      </div>
     </div>
   )
 }

@@ -156,8 +156,9 @@ scp ${ROOT}/docs/hostinger/laravel-public.htaccess ${SSH_TARGET}:${API_PUBLIC_PA
 block "SPA ROOT .htaccess (SPA fallback + pass-through /api)" \
 "scp ${ROOT}/docs/hostinger/public_html.htaccess ${SSH_TARGET}:${PUBLIC_HTML}/.htaccess"
 
-block "FRONTEND UPDATE (rsync da questa macchina)" \
-"rsync -avz --delete ${ROOT}/frontend/dist/ ${SSH_TARGET}:${PUBLIC_HTML}/"
+block "FRONTEND UPDATE (rsync da questa macchina — NON cancellare api/ né .htaccess)" \
+"rsync -avz --delete --filter 'protect api/' --exclude '.htaccess' ${ROOT}/frontend/dist/ ${SSH_TARGET}:${PUBLIC_HTML}/
+scp ${ROOT}/docs/hostinger/public_html.htaccess ${SSH_TARGET}:${PUBLIC_HTML}/.htaccess"
 
 block "MIGRATIONS ONLY" \
 "ssh ${SSH_TARGET} \"cd ${LARAVEL_PATH} && php artisan migrate --force\""

@@ -107,10 +107,15 @@ cp .env.production.example .env.production
 npm install
 npm run build
 
-rsync -avz --delete dist/ TUO_USER@ssh.hostinger.com:~/domains/club.backclub.it/public_html/
+rsync -avz --delete --filter 'protect api/' --exclude '.htaccess' dist/ \
+  -e "ssh -p 65002" u589701076@82.29.176.135:~/domains/club.backclub.it/public_html/
+
+# Ripristina .htaccess SPA (rsync --delete lo rimuove!)
+scp -P 65002 docs/hostinger/public_html.htaccess \
+  u589701076@82.29.176.135:~/domains/club.backclub.it/public_html/.htaccess
 ```
 
-> **Attenzione:** rsync `--delete` sovrascrive `public_html/` ma **non** rimuove `public_html/api/` se esiste già.
+> **Attenzione:** `--exclude 'api/'` **non** protegge `public_html/api/` da `--delete`. Usa sempre `--filter 'protect api/'` oppure ripubblica `public_html/api/` dopo ogni rsync SPA.
 
 ### 3.6 Cron (hPanel → Cron Jobs)
 
@@ -214,10 +219,13 @@ Poi esegui i blocchi che ti servono (vedi sotto).
 **Mac:**
 ```bash
 cd frontend && npm run build
-rsync -avz --delete dist/ TUO_USER@ssh.hostinger.com:~/domains/club.backclub.it/public_html/
+rsync -avz --delete --filter 'protect api/' --exclude '.htaccess' dist/ TUO_USER@HOST:~/domains/club.backclub.it/public_html/
+
+# Ripristina .htaccess SPA (rsync --delete lo rimuove!)
+scp -P PORT docs/hostinger/public_html.htaccess TUO_USER@HOST:~/domains/club.backclub.it/public_html/.htaccess
 ```
 
-> Non tocca `public_html/api/`.
+> Usa `--filter 'protect api/'` — altrimenti `--delete` può cancellare `public_html/api/`.
 
 ---
 
@@ -293,7 +301,10 @@ rsync -avz --delete --exclude '.env' --exclude '.env.*' --exclude 'storage/logs/
 ssh TUO_USER@ssh.hostinger.com "cd ~/domains/club.backclub.it/api && composer install --no-dev --optimize-autoloader && php artisan migrate --force && php artisan config:cache && php artisan route:cache"
 
 # 4. Frontend
-rsync -avz --delete frontend/dist/ TUO_USER@ssh.hostinger.com:~/domains/club.backclub.it/public_html/
+rsync -avz --delete --filter 'protect api/' --exclude '.htaccess' frontend/dist/ \
+  -e "ssh -p 65002" u589701076@82.29.176.135:~/domains/club.backclub.it/public_html/
+scp -P 65002 docs/hostinger/public_html.htaccess \
+  u589701076@82.29.176.135:~/domains/club.backclub.it/public_html/.htaccess
 
 # 5. Verifica
 curl -s https://club.backclub.it/api/up
@@ -353,6 +364,7 @@ Senza secret: usa `./scripts/deploy.sh` + rsync manuale.
 | 404 su `/api/*` | Verifica `public_html/api/index.php` e `.htaccess` |
 | 404 su route SPA | Verifica `public_html/.htaccess` (fallback index.html) |
 | 500 API | `tail ~/domains/club.backclub.it/api/storage/logs/laravel.log` |
+| Login 500 "Server Error" | Rimuovi `JWT_SECRET=` vuoto dal `.env` (usa `APP_KEY`), verifica `APP_KEY` con `php artisan key:generate`, poi `config:clear` + `config:cache` |
 | `/api/entry` 404 ma `/api/up` OK | `.env` → `API_ROUTE_PREFIX=` (vuoto), aggiorna `bootstrap/app.php` dal repo, `index.php` senza strip URI, poi `route:clear` + `config:clear` + `route:cache`. `route:list` deve mostrare `entry/{club_id}` non `api/entry` |
 | CORS error | `FRONTEND_URL` e `CORS_ALLOWED_ORIGINS` = `https://club.backclub.it` |
 | Permessi storage | `chmod -R 775 storage bootstrap/cache` |

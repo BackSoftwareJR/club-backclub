@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { formatCurrency } from '@/lib/utils'
@@ -46,16 +47,31 @@ export function ConfirmModal({
           <Button className="flex-1" disabled={loading} onClick={() => onOpenChange(false)} variant="ghost">
             Cancel
           </Button>
-          <Button className="relative flex-1" disabled={loading} onClick={onConfirm}>
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Processing…
+          <motion.div
+            animate={!loading ? { scale: [1, 1.03, 1] } : undefined}
+            className="flex-1"
+            transition={{ duration: 1.4, repeat: Infinity, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Button className="relative w-full overflow-hidden" disabled={loading} onClick={onConfirm}>
+              {!loading ? (
+                <motion.span
+                  animate={{ opacity: [0.1, 0.3, 0.1], scale: [0.9, 1.2, 1.3] }}
+                  className="pointer-events-none absolute inset-0 rounded-xl bg-[radial-gradient(circle,var(--color-primary),transparent_65%)]"
+                  transition={{ duration: 1.3, repeat: Infinity }}
+                />
+              ) : null}
+              <span className="relative">
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Processing…
+                  </span>
+                ) : (
+                  'Conferma adesso'
+                )}
               </span>
-            ) : (
-              'Confirm'
-            )}
-          </Button>
+            </Button>
+          </motion.div>
         </div>
       </div>
     </Modal>

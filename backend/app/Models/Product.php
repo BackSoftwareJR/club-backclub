@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -22,6 +23,7 @@ class Product extends Model
         'selling_mode',
         'price_config',
         'is_active',
+        'cover_image_path',
     ];
 
     protected function casts(): array
@@ -37,8 +39,22 @@ class Product extends Model
         return $this->belongsTo(Club::class);
     }
 
+    public function galleryMedia(): HasMany
+    {
+        return $this->hasMany(ProductMedia::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     public function walletTransactions(): HasMany
     {
         return $this->hasMany(WalletTransaction::class);
+    }
+
+    public function coverImageUrl(): ?string
+    {
+        if (! $this->cover_image_path) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->cover_image_path);
     }
 }

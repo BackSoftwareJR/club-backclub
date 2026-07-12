@@ -1,9 +1,12 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from 'axios'
 import type {
+  AdminAnalyticsResponse,
   AdminInjectionResponse,
   AiChatResponse,
   AiInterveneResponse,
   AuthResponse,
+  ClubAppearancePayload,
+  ClubIdentity,
   EntryResponse,
   LedgerEntry,
   Member,
@@ -64,6 +67,12 @@ apiClient.interceptors.response.use(
 async function request<T>(config: AxiosRequestConfig): Promise<T> {
   const response = await apiClient.request<T>(config)
   return response.data
+}
+
+function imageUploadData(file: File): FormData {
+  const formData = new FormData()
+  formData.append('image', file)
+  return formData
 }
 
 export const api = {
@@ -127,6 +136,9 @@ export const api = {
 
   getTreasury: (clubId: number) =>
     request<TreasuryResponse>({ method: 'GET', url: `/clubs/${clubId}/admin/treasury` }),
+
+  getAdminAnalytics: (clubId: number) =>
+    request<AdminAnalyticsResponse>({ method: 'GET', url: `/clubs/${clubId}/admin/analytics` }),
 
   recordExpense: (clubId: number, body: { amount: string; description: string }) =>
     request<LedgerEntry>({
@@ -217,5 +229,81 @@ export const api = {
     request<{ message: string }>({
       method: 'DELETE',
       url: `/clubs/${clubId}/admin/products/${productId}`,
+    }),
+
+  uploadProductCover: (clubId: number, productId: number, file: File) =>
+    request<Product>({
+      method: 'POST',
+      url: `/clubs/${clubId}/admin/products/${productId}/cover`,
+      data: imageUploadData(file),
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  deleteProductCover: (clubId: number, productId: number) =>
+    request<Product>({
+      method: 'DELETE',
+      url: `/clubs/${clubId}/admin/products/${productId}/cover`,
+    }),
+
+  uploadProductGalleryImage: (clubId: number, productId: number, file: File) =>
+    request<Product>({
+      method: 'POST',
+      url: `/clubs/${clubId}/admin/products/${productId}/gallery`,
+      data: imageUploadData(file),
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  deleteProductGalleryImage: (clubId: number, productId: number, mediaId: number) =>
+    request<Product>({
+      method: 'DELETE',
+      url: `/clubs/${clubId}/admin/products/${productId}/gallery/${mediaId}`,
+    }),
+
+  reorderProductGallery: (clubId: number, productId: number, mediaIds: number[]) =>
+    request<Product>({
+      method: 'PATCH',
+      url: `/clubs/${clubId}/admin/products/${productId}/gallery/reorder`,
+      data: { media_ids: mediaIds },
+    }),
+
+  getClubIdentity: (clubId: number) =>
+    request<{ data: ClubIdentity }>({
+      method: 'GET',
+      url: `/clubs/${clubId}/admin/identity`,
+    }),
+
+  updateClubAppearance: (clubId: number, body: ClubAppearancePayload) =>
+    request<{ data: ClubIdentity }>({
+      method: 'PATCH',
+      url: `/clubs/${clubId}/admin/appearance`,
+      data: body,
+    }),
+
+  uploadClubLogo: (clubId: number, file: File) =>
+    request<{ data: ClubIdentity }>({
+      method: 'POST',
+      url: `/clubs/${clubId}/admin/identity/logo`,
+      data: imageUploadData(file),
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  deleteClubLogo: (clubId: number) =>
+    request<{ data: ClubIdentity }>({
+      method: 'DELETE',
+      url: `/clubs/${clubId}/admin/identity/logo`,
+    }),
+
+  uploadClubHero: (clubId: number, file: File) =>
+    request<{ data: ClubIdentity }>({
+      method: 'POST',
+      url: `/clubs/${clubId}/admin/identity/hero`,
+      data: imageUploadData(file),
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  deleteClubHero: (clubId: number) =>
+    request<{ data: ClubIdentity }>({
+      method: 'DELETE',
+      url: `/clubs/${clubId}/admin/identity/hero`,
     }),
 }

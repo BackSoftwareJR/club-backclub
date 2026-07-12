@@ -20,6 +20,8 @@ import { Route as ClubClubIdAuthenticatedPurchaseProductIdRouteImport } from './
 import { Route as ClubClubIdAuthenticatedAdminTopupsRouteImport } from './routes/club.$clubId/_authenticated/admin/topups'
 import { Route as ClubClubIdAuthenticatedAdminProductsRouteImport } from './routes/club.$clubId/_authenticated/admin/products'
 import { Route as ClubClubIdAuthenticatedAdminMembersRouteImport } from './routes/club.$clubId/_authenticated/admin/members'
+import { Route as ClubClubIdAuthenticatedAdminAppearanceRouteImport } from './routes/club.$clubId/_authenticated/admin/appearance'
+import { Route as ClubClubIdAuthenticatedAdminAnalyticsRouteImport } from './routes/club.$clubId/_authenticated/admin/analytics'
 
 const LockedRoute = LockedRouteImport.update({
   id: '/locked',
@@ -83,6 +85,18 @@ const ClubClubIdAuthenticatedAdminMembersRoute =
     path: '/admin/members',
     getParentRoute: () => ClubClubIdAuthenticatedRoute,
   } as any)
+const ClubClubIdAuthenticatedAdminAppearanceRoute =
+  ClubClubIdAuthenticatedAdminAppearanceRouteImport.update({
+    id: '/admin/appearance',
+    path: '/admin/appearance',
+    getParentRoute: () => ClubClubIdAuthenticatedRoute,
+  } as any)
+const ClubClubIdAuthenticatedAdminAnalyticsRoute =
+  ClubClubIdAuthenticatedAdminAnalyticsRouteImport.update({
+    id: '/admin/analytics',
+    path: '/admin/analytics',
+    getParentRoute: () => ClubClubIdAuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -91,6 +105,8 @@ export interface FileRoutesByFullPath {
   '/entry/$clubId/$nfcUid': typeof EntryClubIdNfcUidRoute
   '/club/$clubId/wallet': typeof ClubClubIdAuthenticatedWalletRoute
   '/club/$clubId/': typeof ClubClubIdAuthenticatedIndexRoute
+  '/club/$clubId/admin/analytics': typeof ClubClubIdAuthenticatedAdminAnalyticsRoute
+  '/club/$clubId/admin/appearance': typeof ClubClubIdAuthenticatedAdminAppearanceRoute
   '/club/$clubId/admin/members': typeof ClubClubIdAuthenticatedAdminMembersRoute
   '/club/$clubId/admin/products': typeof ClubClubIdAuthenticatedAdminProductsRoute
   '/club/$clubId/admin/topups': typeof ClubClubIdAuthenticatedAdminTopupsRoute
@@ -103,6 +119,8 @@ export interface FileRoutesByTo {
   '/entry/$clubId/$nfcUid': typeof EntryClubIdNfcUidRoute
   '/club/$clubId/wallet': typeof ClubClubIdAuthenticatedWalletRoute
   '/club/$clubId': typeof ClubClubIdAuthenticatedIndexRoute
+  '/club/$clubId/admin/analytics': typeof ClubClubIdAuthenticatedAdminAnalyticsRoute
+  '/club/$clubId/admin/appearance': typeof ClubClubIdAuthenticatedAdminAppearanceRoute
   '/club/$clubId/admin/members': typeof ClubClubIdAuthenticatedAdminMembersRoute
   '/club/$clubId/admin/products': typeof ClubClubIdAuthenticatedAdminProductsRoute
   '/club/$clubId/admin/topups': typeof ClubClubIdAuthenticatedAdminTopupsRoute
@@ -117,6 +135,8 @@ export interface FileRoutesById {
   '/entry/$clubId/$nfcUid': typeof EntryClubIdNfcUidRoute
   '/club/$clubId/_authenticated/wallet': typeof ClubClubIdAuthenticatedWalletRoute
   '/club/$clubId/_authenticated/': typeof ClubClubIdAuthenticatedIndexRoute
+  '/club/$clubId/_authenticated/admin/analytics': typeof ClubClubIdAuthenticatedAdminAnalyticsRoute
+  '/club/$clubId/_authenticated/admin/appearance': typeof ClubClubIdAuthenticatedAdminAppearanceRoute
   '/club/$clubId/_authenticated/admin/members': typeof ClubClubIdAuthenticatedAdminMembersRoute
   '/club/$clubId/_authenticated/admin/products': typeof ClubClubIdAuthenticatedAdminProductsRoute
   '/club/$clubId/_authenticated/admin/topups': typeof ClubClubIdAuthenticatedAdminTopupsRoute
@@ -132,6 +152,8 @@ export interface FileRouteTypes {
     | '/entry/$clubId/$nfcUid'
     | '/club/$clubId/wallet'
     | '/club/$clubId/'
+    | '/club/$clubId/admin/analytics'
+    | '/club/$clubId/admin/appearance'
     | '/club/$clubId/admin/members'
     | '/club/$clubId/admin/products'
     | '/club/$clubId/admin/topups'
@@ -144,6 +166,8 @@ export interface FileRouteTypes {
     | '/entry/$clubId/$nfcUid'
     | '/club/$clubId/wallet'
     | '/club/$clubId'
+    | '/club/$clubId/admin/analytics'
+    | '/club/$clubId/admin/appearance'
     | '/club/$clubId/admin/members'
     | '/club/$clubId/admin/products'
     | '/club/$clubId/admin/topups'
@@ -157,6 +181,8 @@ export interface FileRouteTypes {
     | '/entry/$clubId/$nfcUid'
     | '/club/$clubId/_authenticated/wallet'
     | '/club/$clubId/_authenticated/'
+    | '/club/$clubId/_authenticated/admin/analytics'
+    | '/club/$clubId/_authenticated/admin/appearance'
     | '/club/$clubId/_authenticated/admin/members'
     | '/club/$clubId/_authenticated/admin/products'
     | '/club/$clubId/_authenticated/admin/topups'
@@ -250,12 +276,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClubClubIdAuthenticatedAdminMembersRouteImport
       parentRoute: typeof ClubClubIdAuthenticatedRoute
     }
+    '/club/$clubId/_authenticated/admin/appearance': {
+      id: '/club/$clubId/_authenticated/admin/appearance'
+      path: '/admin/appearance'
+      fullPath: '/club/$clubId/admin/appearance'
+      preLoaderRoute: typeof ClubClubIdAuthenticatedAdminAppearanceRouteImport
+      parentRoute: typeof ClubClubIdAuthenticatedRoute
+    }
+    '/club/$clubId/_authenticated/admin/analytics': {
+      id: '/club/$clubId/_authenticated/admin/analytics'
+      path: '/admin/analytics'
+      fullPath: '/club/$clubId/admin/analytics'
+      preLoaderRoute: typeof ClubClubIdAuthenticatedAdminAnalyticsRouteImport
+      parentRoute: typeof ClubClubIdAuthenticatedRoute
+    }
   }
 }
 
 interface ClubClubIdAuthenticatedRouteChildren {
   ClubClubIdAuthenticatedWalletRoute: typeof ClubClubIdAuthenticatedWalletRoute
   ClubClubIdAuthenticatedIndexRoute: typeof ClubClubIdAuthenticatedIndexRoute
+  ClubClubIdAuthenticatedAdminAnalyticsRoute: typeof ClubClubIdAuthenticatedAdminAnalyticsRoute
+  ClubClubIdAuthenticatedAdminAppearanceRoute: typeof ClubClubIdAuthenticatedAdminAppearanceRoute
   ClubClubIdAuthenticatedAdminMembersRoute: typeof ClubClubIdAuthenticatedAdminMembersRoute
   ClubClubIdAuthenticatedAdminProductsRoute: typeof ClubClubIdAuthenticatedAdminProductsRoute
   ClubClubIdAuthenticatedAdminTopupsRoute: typeof ClubClubIdAuthenticatedAdminTopupsRoute
@@ -267,6 +309,10 @@ const ClubClubIdAuthenticatedRouteChildren: ClubClubIdAuthenticatedRouteChildren
   {
     ClubClubIdAuthenticatedWalletRoute: ClubClubIdAuthenticatedWalletRoute,
     ClubClubIdAuthenticatedIndexRoute: ClubClubIdAuthenticatedIndexRoute,
+    ClubClubIdAuthenticatedAdminAnalyticsRoute:
+      ClubClubIdAuthenticatedAdminAnalyticsRoute,
+    ClubClubIdAuthenticatedAdminAppearanceRoute:
+      ClubClubIdAuthenticatedAdminAppearanceRoute,
     ClubClubIdAuthenticatedAdminMembersRoute:
       ClubClubIdAuthenticatedAdminMembersRoute,
     ClubClubIdAuthenticatedAdminProductsRoute:

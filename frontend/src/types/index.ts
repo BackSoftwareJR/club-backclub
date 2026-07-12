@@ -22,14 +22,21 @@ export interface ThemeColors {
 }
 
 export interface ThemeTypography {
+  preset?: 'elegant_serif' | 'modern_sans'
   heading_font: string
   body_font: string
+}
+
+export interface ThemeInteractions {
+  sounds_enabled: boolean
+  haptics_enabled: boolean
 }
 
 export interface ThemeConfig {
   template_id: number
   colors: ThemeColors
   typography: ThemeTypography
+  interactions?: ThemeInteractions
   assets?: {
     logo_url?: string | null
     cover_url?: string | null
@@ -73,6 +80,14 @@ export interface Product {
   selling_mode: SellingMode
   price_config: PriceConfig
   is_active: boolean
+  cover_image_url: string | null
+  gallery: ProductGalleryImage[]
+}
+
+export interface ProductGalleryImage {
+  id: number
+  image_url: string
+  sort_order: number
 }
 
 export interface WalletResponse {
@@ -112,6 +127,26 @@ export interface ProductPayload {
   is_active?: boolean
 }
 
+export interface ClubIdentity {
+  club_id: number
+  logo_image_url: string | null
+  hero_image_url: string | null
+  theme_config: ThemeConfig
+}
+
+export interface ClubAppearancePayload {
+  template_id: number
+  colors: {
+    primary: string
+    secondary: string
+    background: string
+  }
+  typography: {
+    preset: 'elegant_serif' | 'modern_sans'
+  }
+  interactions: ThemeInteractions
+}
+
 export interface LedgerEntry {
   id: number
   transaction_type: 'user_topup' | 'admin_injection' | 'admin_expense'
@@ -123,6 +158,34 @@ export interface LedgerEntry {
 export interface TreasuryResponse {
   cash_flow_total: string
   ledger: LedgerEntry[]
+}
+
+export interface AnalyticsTrendPoint {
+  date: string
+  daily_delta: string
+  cumulative_total: string
+}
+
+export interface TopConsumedProduct {
+  product_id: number
+  product_name: string
+  purchases_count: number
+  total_spent: string
+}
+
+export interface MemberViceStats {
+  total_members: number
+  active_spenders: number
+  low_balance_members: number
+  total_purchases: number
+  top_spender_email: string
+  top_spender_total: string
+}
+
+export interface AdminAnalyticsResponse {
+  cassa_trend: AnalyticsTrendPoint[]
+  top_consumed_products: TopConsumedProduct[]
+  member_vice_stats: MemberViceStats
 }
 
 export interface AdminInjectionResponse {

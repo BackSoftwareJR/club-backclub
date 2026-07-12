@@ -19,11 +19,15 @@ use App\Models\ClubLedger;
 use App\Models\ClubMember;
 use App\Models\Product;
 use App\Models\TopupRequest;
+use App\Models\WalletTransaction;
 use App\Models\UserWallet;
+use Carbon\CarbonImmutable;
 use App\Services\Treasury\MemberService;
 use App\Services\Treasury\TopupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
@@ -51,6 +55,102 @@ class AdminController extends Controller
         return response()->json([
             'cash_flow_total' => $cashFlowTotal,
             'ledger' => LedgerEntryResource::collection($ledger),
+        ]);
+    }
+
+    public function analytics(int $clubId): JsonResponse
+    {
+        $today = CarbonImmutable::today();
+        $startDate = $today->subDays(29);
+        $baselineBeforeWindow = (float) ClubLedger::query()
+            ->where('club_id', $clubId)
+            ->where('created_at', '<', $startDate)
+            ->sum('amount');
+
+        /** @var Collection<int, object{day: string, amount: string}> $dailyLedgerRaw */
+        $dailyLedgerRaw = ClubLedger::query()
+            ->selectRaw('DATE(created_at) as day, SUM(amount) as amount')
+            ->where('club_id', $clubId)
+            ->whereBetween('created_at', [$startDate, $today->endOfDay()])
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get();
+
+        $ledgerByDay = $dailyLedgerRaw->keyBy('day');
+        $runningTotal = $baselineBeforeWindow;
+        $cassaTrend = [];
+
+        foreach (range(0, 29) as $index) {
+            $date = $startDate->addDays($index);
+            $dayKey = $date->toDateString();
+            $dailyAmount = (float) ($ledgerByDay->get($dayKey)->amount ?? 0);
+            $runningTotal += $dailyAmount;
+            $cassaTrend[] = [
+                'date' => $dayKey,
+                'daily_delta' => number_format($dailyAmount, 2, '.', ''),
+                'cumulative_total' => number_format($runningTotal, 2, '.', ''),
+            ];
+        }
+
+        $topConsumedProducts = WalletTransaction::query()
+            ->join('user_wallets', 'user_wallets.id', '=', 'wallet_transactions.wallet_id')
+            ->join('products', 'products.id', '=', 'wallet_transactions.product_id')
+            ->where('user_wallets.club_id', $clubId)
+            ->groupBy('products.id', 'products.name')
+            ->orderByRaw('COUNT(wallet_transactions.id) DESC')
+            ->limit(5)
+            ->get([
+                'products.id as product_id',
+                'products.name as product_name',
+                DB::raw('COUNT(wallet_transactions.id) as purchases_count'),
+                DB::raw('SUM(wallet_transactions.amount_deducted) as total_spent'),
+            ])
+            ->map(fn (object $row): array => [
+                'product_id' => (int) $row->product_id,
+                'product_name' => (string) $row->product_name,
+                'purchases_count' => (int) $row->purchases_count,
+                'total_spent' => number_format((float) $row->total_spent, 2, '.', ''),
+            ])
+            ->values();
+
+        $memberBase = ClubMember::query()->where('club_id', $clubId);
+        $totalMembers = (int) $memberBase->count();
+        $membersWithWallet = UserWallet::query()
+            ->where('club_id', $clubId)
+            ->where('current_balance', '<=', 10)
+            ->count();
+
+        $spenderAggregate = WalletTransaction::query()
+            ->join('user_wallets', 'user_wallets.id', '=', 'wallet_transactions.wallet_id')
+            ->join('users', 'users.id', '=', 'user_wallets.user_id')
+            ->where('user_wallets.club_id', $clubId)
+            ->selectRaw('users.email as email, SUM(wallet_transactions.amount_deducted) as total_spent')
+            ->groupBy('users.email')
+            ->orderByDesc('total_spent')
+            ->first();
+
+        $transactionsCount = (int) WalletTransaction::query()
+            ->join('user_wallets', 'user_wallets.id', '=', 'wallet_transactions.wallet_id')
+            ->where('user_wallets.club_id', $clubId)
+            ->count();
+
+        $uniquePurchasers = (int) WalletTransaction::query()
+            ->join('user_wallets', 'user_wallets.id', '=', 'wallet_transactions.wallet_id')
+            ->where('user_wallets.club_id', $clubId)
+            ->distinct('user_wallets.user_id')
+            ->count('user_wallets.user_id');
+
+        return response()->json([
+            'cassa_trend' => $cassaTrend,
+            'top_consumed_products' => $topConsumedProducts,
+            'member_vice_stats' => [
+                'total_members' => $totalMembers,
+                'active_spenders' => $uniquePurchasers,
+                'low_balance_members' => (int) $membersWithWallet,
+                'total_purchases' => $transactionsCount,
+                'top_spender_email' => (string) ($spenderAggregate->email ?? 'N/A'),
+                'top_spender_total' => number_format((float) ($spenderAggregate->total_spent ?? 0), 2, '.', ''),
+            ],
         ]);
     }
 
@@ -192,6 +292,7 @@ class AdminController extends Controller
     public function listProducts(int $clubId): JsonResponse
     {
         $products = Product::query()
+            ->with('galleryMedia')
             ->where('club_id', $clubId)
             ->orderBy('name')
             ->get();
@@ -213,7 +314,7 @@ class AdminController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
-        return response()->json(new ProductResource($product), 201);
+        return response()->json(new ProductResource($product->load('galleryMedia')), 201);
     }
 
     public function updateProduct(UpdateProductRequest $request, int $clubId, int $productId): JsonResponse
@@ -224,7 +325,7 @@ class AdminController extends Controller
 
         $product->update($request->validated());
 
-        return response()->json(new ProductResource($product->fresh()));
+        return response()->json(new ProductResource($product->fresh()->load('galleryMedia')));
     }
 
     public function destroyProduct(int $clubId, int $productId): JsonResponse

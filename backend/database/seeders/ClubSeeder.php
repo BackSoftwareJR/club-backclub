@@ -23,8 +23,13 @@ class ClubSeeder extends Seeder
                 'glass_opacity' => 0.6,
             ],
             'typography' => [
-                'heading_font' => 'Playfair Display',
-                'body_font' => 'Inter',
+                'preset' => Club::TYPOGRAPHY_ELEGANT,
+                'heading_font' => "'Playfair Display', 'Times New Roman', Times, serif",
+                'body_font' => "'Cormorant Garamond', Georgia, 'Times New Roman', serif",
+            ],
+            'interactions' => [
+                'sounds_enabled' => true,
+                'haptics_enabled' => true,
             ],
             'assets' => [
                 'logo_url' => null,
